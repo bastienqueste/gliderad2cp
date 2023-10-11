@@ -8,4 +8,5 @@ tqdm
 cmocean
 seaborn
 pyarrow
+pooch
 
