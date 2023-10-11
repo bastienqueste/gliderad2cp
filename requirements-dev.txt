@@ -1,0 +1,12 @@
+xarray
+pandas
+netcdf4
+dask
+scipy
+gsw
+tqdm
+cmocean
+seaborn
+pyarrow
+pooch
+pytest

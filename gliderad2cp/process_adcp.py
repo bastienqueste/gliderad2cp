@@ -1165,7 +1165,10 @@ def calcENUfromXYZ(ADCP, glider, options):
 
     plog('Converted from XYZ to ENU')
 
-    _gd = (ADCP['Pressure'].values > 5) & (np.abs(ADCP['profile_number'] - 150) < 10)
+    profiles = ADCP['profile_number'].values
+    profile_center = np.nanmean(profiles)
+    profile_range = np.nanmax(profiles) - np.nanmin(profiles)
+    _gd = (ADCP['Pressure'].values > 5) & (np.abs(ADCP['profile_number'] - profile_center) < profile_range * 0.1)
     ##### PLOT 1
     U = ADCP.isel(time=_gd)['U'].mean(dim='gridded_bin').values.flatten()
     dP = np.gradient(ADCP.isel(time=_gd)['Depth'].values, ADCP.isel(time=_gd)['time'].astype('float') / 1e9)
@@ -1216,7 +1219,10 @@ def calcENUfromXYZ(ADCP, glider, options):
 
 
 def plot_subsurface_movement(ADCP, glider, options):
-    _gd = (ADCP['Pressure'].values > 5) & (np.abs(ADCP['profile_number'] - 150) < 10)
+    profiles = ADCP['profile_number'].values
+    profile_center = np.nanmean(profiles)
+    profile_range = np.nanmax(profiles) - np.nanmin(profiles)
+    _gd = (ADCP['Pressure'].values > 5) & (np.abs(ADCP['profile_number'] - profile_center) < profile_range * 0.1)
     ##### PLOT 2
     deltat = np.append(np.diff(ADCP['time'].values.astype('float') / 1e9), np.NaN)
 
