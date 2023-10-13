@@ -30,6 +30,13 @@ jobs:
         micromamba create --name TEST python=${{ matrix.python-version }} pytest --file requirements-dev.txt --channel conda-forge
         && micromamba activate TEST
 
+    - name: Install gliderad2cp
+      shell: bash -l {0}
+      run: |
+        micromamba activate TEST
+        && python -m pip install -e . --no-deps --force-reinstall
+
+
     - name: Tests
       shell: bash -l {0}
       run: >
