@@ -1,0 +1,77 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools_scm",
+  "wheel",
+]
+
+[project]
+name = "gliderad2cp"
+description = "process glider AD2CP data"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+authors = [
+    {name = "Callum Rollo", email = "c.rollo@outlook.com"},
+]
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+dynamic = [
+  "dependencies",
+  "version",
+]
+[project.urls]
+documentation = "https://github.com/bastienqueste/gliderad2cp"
+homepage = "https://github.com/bastienqueste/gliderad2cp"
+repository = "https://github.com/bastienqueste/gliderad2cp"
+
+[tool.setuptools]
+packages = ["gliderad2cp"]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
+write_to = "gliderad2cp/_version.py"
+write_to_template = "__version__ = '{version}'"
+tag_regex = "^(?P<prefix>v)?(?P<version>[^\\+]+)(?P<suffix>.*)?$"
+
+[tool.ruff]
+select = [
+    "A", # flake8-builtins
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "F", # flakes
+    "I", # import sorting
+    "T20", # flake8-print
+    "UP", # upgrade
+]
+target-version = "py38"
+line-length = 120
+
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
+]
+
+[tool.check-manifest]
+ignore = [
+    "*.yml",
+    ".coveragerc",
+    "Makefile",
+    "docs",
+    "docs/*",
+    "notebooks",
+    "notebooks/*",
+    "*.ipynb",
+    "tests",
+    "tests/*",
+]
+

@@ -12,7 +12,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
         os: [windows-latest, ubuntu-latest, macos-latest]
-      fail-fast: false
+      fail-fast: true
 
     steps:
     - uses: actions/checkout@v4
@@ -29,6 +29,13 @@ jobs:
       run: >
         micromamba create --name TEST python=${{ matrix.python-version }} pytest --file requirements-dev.txt --channel conda-forge
         && micromamba activate TEST
+
+    - name: Install gliderad2cp
+      shell: bash -l {0}
+      run: >
+        micromamba activate TEST
+        && python -m pip install -e . --no-deps --force-reinstall
+
 
     - name: Tests
       shell: bash -l {0}
