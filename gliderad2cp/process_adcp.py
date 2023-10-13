@@ -492,19 +492,32 @@ def _heading_correction(ADCP, glider, options):
         x[idx] = x[idx] + (360 * -np.sign(x[idx]))
         return x
 
-    cosd = lambda x: np.cos(np.deg2rad(x))
-    sind = lambda x: np.sin(np.deg2rad(x))
-    atan2d = lambda x, y: np.rad2deg(np.arctan2(x, y))
-    rot_x = (
-        lambda x, y, z: x * cosd(pitch)
-        + y * sind(roll) * sind(pitch)
-        + z * cosd(roll) * sind(pitch)
-    )
-    rot_y = lambda x, y, z: y * cosd(roll) - z * sind(roll)
-    wrap = lambda x: (x + 360) % 360
-    heading = lambda x, y, z: wrap(
-        atan2d(rot_x(x, sign * y, sign * z), rot_y(x, sign * y, sign * z)) - 90
-    )
+    def cosd(x):
+        return np.cos(np.deg2rad(x))
+
+    def sind(x):
+        return np.sin(np.deg2rad(x))
+
+    def atan2d(x, y):
+        return np.rad2deg(np.arctan2(x, y))
+
+    def rot_x(x, y, z):
+        return (
+            x * cosd(pitch)
+            + y * sind(roll) * sind(pitch)
+            + z * cosd(roll) * sind(pitch)
+        )
+
+    def rot_y(x, y, z):
+        return y * cosd(roll) - z * sind(roll)
+
+    def wrap(x):
+        return (x + 360) % 360
+
+    def heading(x, y, z):
+        return wrap(
+            atan2d(rot_x(x, sign * y, sign * z), rot_y(x, sign * y, sign * z)) - 90
+        )
 
     def calibrate(x, y, z, coeffs):
         if simple:
@@ -730,7 +743,8 @@ def remove_outliers(ADCP, options):
 
 
 def plot_data_density(ADCP, options):
-    agg_fn = lambda x: np.count_nonzero(np.isfinite(x))
+    def agg_fn(x):
+        return np.count_nonzero(np.isfinite(x))
 
     CNT, XI, YI = grid2d(
         np.tile(ADCP.profile_number.values, (len(ADCP.bin), 1)).T.flatten(),
@@ -1268,8 +1282,12 @@ def calcXYZfrom3beam(ADCP, options):
     ts = 25  # theta side - Beam 2 and 4 angle from Z
 
     c = 1  # for convex transducer head
-    a = lambda t: 1 / (2 * sin(t))
-    b = lambda t: 1 / (4 * cos(t))
+
+    def a(t):
+        return 1 / (2 * sin(t))
+
+    def b(t):
+        return 1 / (4 * cos(t))
 
     V1 = ADCP["V1"].values
     V2 = ADCP["V2"].values
@@ -1291,9 +1309,8 @@ def calcXYZfrom3beam(ADCP, options):
     # (-(0.6782/np.sqrt(2))*good_beam + (1.1831/np.sqrt(2))*V2 + (1.1831/np.sqrt(2))*V4) / (0.6782/np.sqrt(2))
 
     # replaced_by = lambda good_beam : (0.5518*V2 + 0.5518*V4 - 0.7400*good_beam)/0.7400
-    replaced_by = lambda good_beam: (
-        2 * b(ts) * V2 + 2 * b(ts) * V4 - 2 * b(tf) * good_beam
-    ) / (2 * b(tf))
+    def replaced_by(good_beam):
+        return (2 * b(ts) * V2 + 2 * b(ts) * V4 - 2 * b(tf) * good_beam) / (2 * b(tf))
 
     upcasts = ADCP["Pitch"] > 0
     downcasts = ~upcasts
@@ -1756,7 +1773,9 @@ def verify_calcENUfromXYZ(ADCP, options):
 def get_DAC(ADCP, glider, options):
     ## Calculate full x-y dead reckoning during each dive
     def reset_transport_at_GPS(arr):
-        ffill = lambda arr: pd.DataFrame(arr).fillna(method="ffill").values.flatten()
+        def ffill(arr):
+            return pd.DataFrame(arr).fillna(method="ffill").values.flatten()
+
         ref = np.zeros(np.shape(arr)) * np.NaN
         ref[_gps] = arr[_gps]
         return arr - ffill(ref)
@@ -1816,8 +1835,11 @@ def get_DAC(ADCP, glider, options):
     dt = np.zeros(np.shape(dnum)) * np.NaN
     meant = np.zeros(np.shape(dnum)) * np.NaN
 
-    lon2m = lambda x, y: gsw.distance([x, x + 1], [y, y])
-    lat2m = lambda x, y: gsw.distance([x, x], [y, y + 1])
+    def lon2m(x, y):
+        return gsw.distance([x, x + 1], [y, y])
+
+    def lat2m(x, y):
+        return gsw.distance([x, x], [y, y + 1])
 
     for idx, dx in enumerate(dnum):
         try:
@@ -1882,8 +1904,11 @@ def get_DAC(ADCP, glider, options):
 def getSurfaceDrift(glider, options):
     _gps = (glider.DeadReckoning.values < 1) & (glider.NAV_RESOURCE.values == 116)
 
-    lon2m = lambda x, y: gsw.distance([x, x + 1], [y, y])
-    lat2m = lambda x, y: gsw.distance([x, x], [y, y + 1])
+    def lon2m(x, y):
+        return gsw.distance([x, x + 1], [y, y])
+
+    def lat2m(x, y):
+        return gsw.distance([x, x], [y, y + 1])
 
     dnum = glider.diveNum.values[_gps]
 
@@ -2375,14 +2400,16 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
 
     variables = glider.columns
     variables = [x for x in variables if x not in exclude_from_grid]
-    grid = lambda name: grid2d(
-        glider.profile_number.values,
-        glider.pressure.values,
-        glider[name].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
+
+    def grid(name):
+        return grid2d(
+            glider.profile_number.values,
+            glider.pressure.values,
+            glider[name].values,
+            xi=xaxis,
+            yi=yaxis,
+            fn="mean",
+        )[0]
 
     for varname in tqdm(variables):
         try:
@@ -2613,9 +2640,15 @@ def calc_bias(out, yaxis, taxis, days, options):
         return bias * coeff
 
     def score(E, N):
-        rmsd_h = lambda x: np.sqrt(np.nanmean(x**2, axis=1))
-        rmsd = lambda x: np.sqrt(np.nanmean(x**2))
-        y_weighting = lambda x: x * 0 + 1
+        def rmsd_h(x):
+            return np.sqrt(np.nanmean(x**2, axis=1))
+
+        def rmsd(x):
+            return np.sqrt(np.nanmean(x**2))
+
+        def y_weighting(x):
+            return x * 0 + 1
+
         return rmsd((rmsd_h(E) + rmsd_h(N)) * y_weighting(yaxis)) * 1e6
 
     def fn(coeff):
