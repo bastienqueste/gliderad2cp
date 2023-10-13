@@ -88,17 +88,17 @@ def load(parquet_file):
     data = pd.read_parquet(parquet_file)
     print("Loaded " + parquet_file)
     sel_cols = [
-        "Timestamp",
+        "time",
         "temperature",
         "salinity",
         "latitude",
         "longitude",
-        "profileNum",
-        "Declination",
-        "LEGATO_PRESSURE",
+        "profile_number",
+        "declination",
+        "pressure",
     ]
     data = data[sel_cols]
-    time_ms = data.Timestamp.values
+    time_ms = data.time.values
     if time_ms.dtype != "<M8[ns]":
         divisor = 1e3
         if time_ms.dtype == "<M8[us]":
@@ -109,20 +109,12 @@ def load(parquet_file):
         for seconds in time_float:
             time_ms.append(base + datetime.timedelta(seconds=seconds + 0.0000001))
         time_nanoseconds = pd.to_datetime(time_ms)
-        data["Timestamp"] = time_nanoseconds
-    data["date_float"] = data["Timestamp"].values.astype("float")
-    p = data["LEGATO_PRESSURE"]
+        data["time"] = time_nanoseconds
+    data["date_float"] = data["time"].values.astype("float")
+    p = data["pressure"]
     SA = gsw.conversions.SA_from_SP(data.salinity, p, data.longitude, data.latitude)
     CT = gsw.CT_from_t(SA, data["temperature"], p)
     data["soundspeed"] = gsw.sound_speed(SA, CT, p)
-    data = data.rename(
-        columns={
-            "LEGATO_PRESSURE": "pressure",
-            "Timestamp": "time",
-            "profileNum": "profile_number",
-            "Declination": "declination",
-        }
-    )
     data.index = data.time
     data.index.name = None
     return data
@@ -1780,7 +1772,7 @@ def get_DAC(ADCP, glider, options):
         ref[_gps] = arr[_gps]
         return arr - ffill(ref)
 
-    _gps = (glider.DeadReckoning.values < 1) & (glider.NAV_RESOURCE.values == 116)
+    _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
 
     t = glider.date_float.values * 1e-9
     heading = interp(
@@ -1801,14 +1793,14 @@ def get_DAC(ADCP, glider, options):
     dn = reset_transport_at_GPS(dn)
 
     ## Calculate on per dive basis
-    dnum = np.unique(glider.diveNum.values)
+    dnum = np.unique(glider.dive_number.values)
     sidx = np.zeros(np.shape(dnum)) * np.NaN
     didx = np.zeros(np.shape(dnum)) * np.NaN
 
     for idx, dx in enumerate(dnum):
         try:
-            sidx[idx] = np.flatnonzero((glider.diveNum.values == dx) & _gps)[0]
-            didx[idx] = np.flatnonzero((glider.diveNum.values == dx) & _gps)[-1]
+            sidx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[0]
+            didx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[-1]
         except IndexError:
             continue
 
@@ -1902,7 +1894,7 @@ def get_DAC(ADCP, glider, options):
 
 
 def getSurfaceDrift(glider, options):
-    _gps = (glider.DeadReckoning.values < 1) & (glider.NAV_RESOURCE.values == 116)
+    _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
 
     def lon2m(x, y):
         return gsw.distance([x, x + 1], [y, y])
@@ -1910,7 +1902,7 @@ def getSurfaceDrift(glider, options):
     def lat2m(x, y):
         return gsw.distance([x, x], [y, y + 1])
 
-    dnum = glider.diveNum.values[_gps]
+    dnum = glider.dive_number.values[_gps]
 
     lons = glider.longitude.values[_gps]
     lats = glider.latitude.values[_gps]
@@ -1925,9 +1917,9 @@ def getSurfaceDrift(glider, options):
     times = glider.time.values.astype("float")[_gps] / 10**9
     dtimes = np.gradient(times)
 
-    dE = np.full(int(np.nanmax(glider.diveNum)), np.NaN)
-    dN = np.full(int(np.nanmax(glider.diveNum)), np.NaN)
-    dT = np.full(int(np.nanmax(glider.diveNum)), np.NaN)
+    dE = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
+    dN = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
+    dT = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
 
     for idx in range(len(dE)):
         _gd = (dtimes < 21) & (dnum == idx + 1)
@@ -2372,7 +2364,7 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
         "AngPos",
         "BallastCmd",
         "BallastPos",
-        "DeadReckoning",
+        "dead_reckoning",
         "declination",
         "Depth",
         "DesiredH",
@@ -2381,7 +2373,7 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
         "NAV_DEPTH",
         "NAV_LATITUDE",
         "NAV_LONGITUDE",
-        "NAV_RESOURCE",
+        "nav_resource",
         "NavState",
         "Pa",
         "Pitch",
@@ -2798,9 +2790,9 @@ def velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP):
     extra_data.index = data.index
     data["speed_vert"] = extra_data["speed_vert"]
     data["speed_horz"] = extra_data["speed_horz"]
-    data["DeadReckoning"] = extra_data["DeadReckoning"]
-    data["NAV_RESOURCE"] = extra_data["NAV_RESOURCE"]
-    data["diveNum"] = extra_data["diveNum"]
+    data["dead_reckoning"] = extra_data["dead_reckoning"]
+    data["nav_resource"] = extra_data["nav_resource"]
+    data["dive_number"] = extra_data["dive_number"]
     xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options)
     data = get_DAC(ADCP, data, options)
     dE, dN, dT = getSurfaceDrift(data, options)

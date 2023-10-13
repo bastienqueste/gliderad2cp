@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import sys
+
 module_dir = Path(__file__).parent.parent.absolute()
 sys.path.append(str(module_dir))
 from gliderad2cp import process_adcp
@@ -15,19 +16,21 @@ def test_processing():
     data_source.fetch(f"adcp_profiles_{profile_range}.nc")
     adcp_path = str(data_source.path / f"adcp_profiles_{profile_range}.nc")
     options = {
-        'debug_plots': False,
-        'correctADCPHeading': True,
-        'ADCP_discardFirstBins': 0,
-        'ADCP_correlationThreshold': 70,
-        'ADCP_amplitudeThreshold': 75,
-        'ADCP_velocityThreshold': 0.8,
-        'correctXshear': False,
-        'correctYshear': False,
-        'correctZshear': False,
-        'correctZZshear': False,
-        'ADCP_regrid_correlation_threshold': 20,
+        "debug_plots": False,
+        "correctADCPHeading": True,
+        "ADCP_discardFirstBins": 0,
+        "ADCP_correlationThreshold": 70,
+        "ADCP_amplitudeThreshold": 75,
+        "ADCP_velocityThreshold": 0.8,
+        "correctXshear": False,
+        "correctYshear": False,
+        "correctZshear": False,
+        "correctZZshear": False,
+        "ADCP_regrid_correlation_threshold": 20,
     }
-    ADCP, data, options = process_adcp.load_adcp_glider_data(adcp_path, glider_pqt_path, options)
+    ADCP, data, options = process_adcp.load_adcp_glider_data(
+        adcp_path, glider_pqt_path, options
+    )
     ADCP = process_adcp.remapADCPdepth(ADCP, options)
     ADCP = process_adcp.correct_heading(ADCP, data, options)
     ADCP = process_adcp.soundspeed_correction(ADCP)
@@ -43,29 +46,36 @@ def test_processing():
     out = process_adcp.grid_data(ADCP, data, {}, xaxis, yaxis)
 
     ds = process_adcp.make_dataset(out)
-    ds_min = ds[['Sh_E', 'Sh_N', 'Sh_U']]
+    ds_min = ds[["Sh_E", "Sh_N", "Sh_U"]]
     data_source.fetch(f"processed_velocity_{profile_range}.nc")
-    ds_min_test = xr.open_dataset(str(data_source.path / f"processed_velocity_{profile_range}.nc"))
+    ds_min_test = xr.open_dataset(
+        str(data_source.path / f"processed_velocity_{profile_range}.nc")
+    )
     for var in list(ds_min):
-        assert np.allclose(ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3)
+        assert np.allclose(
+            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3
+        )
     # integrate the gridded shear from here
 
     extra_data = pd.read_parquet(glider_pqt_path)
     extra_data.index = data.index
     data["speed_vert"] = extra_data["speed_vert"]
     data["speed_horz"] = extra_data["speed_horz"]
-    data["DeadReckoning"] = extra_data["DeadReckoning"]
-    data["NAV_RESOURCE"] = extra_data["NAV_RESOURCE"]
-    data["diveNum"] = extra_data["diveNum"]
+    data["dead_reckoning"] = extra_data["dead_reckoning"]
+    data["nav_resource"] = extra_data["nav_resource"]
+    data["dive_number"] = extra_data["dive_number"]
     data = process_adcp.get_DAC(ADCP, data, options)
     dE, dN, dT = process_adcp.getSurfaceDrift(data, options)
     ADCP = process_adcp.bottom_track(ADCP, adcp_path, options)
-    out = process_adcp.reference_shear(ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options)
+    out = process_adcp.reference_shear(
+        ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options
+    )
     out = process_adcp.grid_data(ADCP, data, out, xaxis, yaxis)
     out = process_adcp.calc_bias(out, yaxis, taxis, days, options)
 
     ds = process_adcp.make_dataset(out)
-    ds_min = ds[['ADCP_E', 'ADCP_N']]
+    ds_min = ds[["ADCP_E", "ADCP_N"]]
     for var in list(ds_min):
-        assert np.allclose(ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3)
-
+        assert np.allclose(
+            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3
+        )
