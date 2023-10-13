@@ -1,11 +1,7 @@
 import xarray as xr
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
-module_dir = Path(__file__).parent.parent.absolute()
-sys.path.append(str(module_dir))
 from gliderad2cp import process_adcp
 from gliderad2cp.download_example_data import data_source
 
