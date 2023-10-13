@@ -1,0 +1,64 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+    - id: trailing-whitespace
+    - id: check-ast
+    - id: debug-statements
+    - id: end-of-file-fixer
+    - id: check-docstring-first
+    - id: check-added-large-files
+    - id: requirements-txt-fixer
+    - id: file-contents-sorter
+      files: requirements-dev.txt
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.0.276
+  hooks:
+    - id: ruff
+      types_or: [python, pyi, jupyter]
+      args: [--line-length=120, --fix]
+
+- repo: https://github.com/psf/black
+  rev: 23.3.0
+  hooks:
+  - id: black
+    language_version: python3
+
+- repo: https://github.com/keewis/blackdoc
+  rev: v0.3.8
+  hooks:
+    - id: blackdoc
+
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.2.5
+  hooks:
+    - id: codespell
+      exclude: >
+            (?x)^(
+                .*\.ipynb
+            )$
+      args:
+        - --ignore-words-list=buda
+
+- repo: https://github.com/tox-dev/pyproject-fmt
+  rev: "0.13.0"
+  hooks:
+    - id: pyproject-fmt
+
+- repo: https://github.com/aio-libs/sort-all
+  rev: "v1.2.0"
+  hooks:
+    - id: sort-all
+      types: [file, python]
+
+ci:
+    autofix_commit_msg: |
+        [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+        for more information, see https://pre-commit.ci
+    autofix_prs: false
+    autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+    autoupdate_schedule: monthly
+    skip: []
+    submodules: false
