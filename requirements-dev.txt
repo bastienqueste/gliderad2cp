@@ -1,4 +1,6 @@
 xarray
+numpy
+matplotlib
 pandas
 netcdf4
 dask
