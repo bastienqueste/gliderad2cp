@@ -56,11 +56,6 @@ select = [
 target-version = "py38"
 line-length = 120
 
-filterwarnings = [
-    "ignore::UserWarning",
-    "ignore::RuntimeWarning",
-]
-
 [tool.check-manifest]
 ignore = [
     "*.yml",
@@ -74,4 +69,3 @@ ignore = [
     "tests",
     "tests/*",
 ]
-

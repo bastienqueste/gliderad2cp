@@ -1,20 +1,22 @@
-import warnings
-from glob import glob
-from tqdm import tqdm
-from datetime import datetime as dt
 import datetime
+import json
+import logging
+import warnings
+from datetime import datetime as dt
+from glob import glob
+from pathlib import Path
+from urllib import request
+
+import cmocean.cm as cmo
+import gsw
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import xarray as xr
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
-import gsw
-import matplotlib.pyplot as plt
-import seaborn as sns
-import cmocean.cm as cmo
-import json
-from urllib import request
-from pathlib import Path
+from tqdm import tqdm
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
@@ -53,6 +55,7 @@ sns.set(
 )
 y_res = 1
 plot_num = 0
+_log = logging.getLogger(__name__)
 
 
 def save_plot(plot_dir, plot_name):
@@ -66,7 +69,7 @@ def get_declination(data, key):
     Requires an API key. Register at https://www.ngdc.noaa.gov/geomag/CalcSurvey.shtml
     """
     if "declination" in list(data):
-        print("declination data already present")
+        _log.info("declination data already present")
         return data
     time = data.time.mean()
     year = time.year
@@ -80,13 +83,16 @@ def get_declination(data, key):
     )
     result = json.load(request.urlopen(url))
     declination = result["result"][0]["declination"]
-    print(f"declination of {declination} added to data")
+    _log.info(f"declination of {declination} added to data")
     data["declination"] = declination
 
 
-def load(parquet_file):
-    data = pd.read_parquet(parquet_file)
-    print("Loaded " + parquet_file)
+def load(glider_file):
+    if str(glider_file)[-4:] == ".csv":
+        data = pd.read_csv(glider_file, parse_dates=["time"])
+    else:
+        data = pd.read_parquet(glider_file)
+    _log.info(f"Loaded {glider_file}")
     sel_cols = [
         "time",
         "temperature",
@@ -160,15 +166,15 @@ def rmsd(x):
 
 
 def plog(msg):
-    print(str(dt.now().replace(microsecond=0)) + " : " + msg)
+    _log.info(str(dt.now().replace(microsecond=0)) + " : " + msg)
     return None
 
 
-def load_adcp_glider_data(adcp_path, glider_pqt_path, options):
-    glider = load(glider_pqt_path)
+def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
+    glider = load(glider_file_path)
 
-    ADCP = xr.open_mfdataset(adcp_path, group="Data/Average")
-    ADCP_settings = xr.open_mfdataset(glob(adcp_path)[0], group="Config")
+    ADCP = xr.open_mfdataset(adcp_file_path, group="Data/Average")
+    ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
     adcp_time_float = ADCP.time.values.astype("float")
     # if ADCP.time.dtype == '<M8[ns]':
@@ -446,13 +452,13 @@ def _heading_correction(ADCP, glider, options):
             out = magdata.readline().decode("utf-8")
             if 'total-intensity units="nT"' in out:
                 string = out
-                print(out)
+                _log.info(out)
                 break
         target = float(string.split(">")[1].split("<")[0])
         nT2milligauss = (
             10**-9 * 10000 * 1000
         )  # To tesla, then to gauss then to millgauss
-        print("Target = " + str(target * nT2milligauss))
+        _log.info("Target = " + str(target * nT2milligauss))
         return target * nT2milligauss
 
     target = getGeoMagStrength()
@@ -530,8 +536,8 @@ def _heading_correction(ADCP, glider, options):
         return rmsd(x, y, z)
 
     coeffs = fmin(minimisation, np.array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]))
-    print(np.reshape(coeffs[:9], (3, 3)))
-    print(coeffs[-3:])
+    _log.info(np.reshape(coeffs[:9], (3, 3)))
+    _log.info(coeffs[-3:])
 
     magx, magy, magz = calibrate(MagX.values, MagY.values, MagZ.values, coeffs)
     cal_heading = heading(magx, magy, magz)
@@ -600,7 +606,7 @@ def correct_heading(ADCP, glider, options):
     if options["correctADCPHeading"]:
         if "Heading_old" in ADCP:
             ADCP["Heading"] = ("time", ADCP["Heading_old"].values)
-            print("Resetting to original heading")
+            _log.info("Resetting to original heading")
 
         ADCP["Heading_old"] = ("time", ADCP["Heading"].values)
         ADCP["Heading"] = (
@@ -1188,10 +1194,10 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
     if depth_offsets is None:
         depth_offsets = calc_ideal_depth_offsets(bin_size, blanking_distance)
 
-    print("Using the following depth offsets:")
-    print(depth_offsets)
-    print(" ")
-    print("Running gridding on all 4 beams:")
+    _log.info("Using the following depth offsets:")
+    _log.info(depth_offsets)
+    _log.info(" ")
+    _log.info("Running gridding on all 4 beams:")
 
     ## Extract to np array for speed
 
@@ -1308,7 +1314,7 @@ def calcXYZfrom3beam(ADCP, options):
     downcasts = ~upcasts
 
     if options["top_mounted"]:
-        print("Assuming ADCP is top mounted")
+        _log.info("Assuming ADCP is top mounted")
         V1[downcasts, :] = replaced_by(V3)[
             downcasts, :
         ]  # Use aft beam on downcasts when upward facing
@@ -1316,7 +1322,7 @@ def calcXYZfrom3beam(ADCP, options):
             upcasts, :
         ]  # Use fore beam on upcasts when upward facing
     else:
-        print("Assuming ADCP is bottom mounted")
+        _log.info("Assuming ADCP is bottom mounted")
         V1[upcasts, :] = replaced_by(V3)[
             upcasts, :
         ]  # Use aft beam on upcasts when downward facing
@@ -1685,7 +1691,7 @@ def verify_calcENUfromXYZ(ADCP, options):
     PD = (ADCP["Pitch"].values < 0) & (ADCP["Depth"].values > 20)
     PU = (ADCP["Pitch"].values > 0) & (ADCP["Depth"].values > 20)
 
-    print(np.count_nonzero(PD), np.count_nonzero(PU))
+    _log.info(np.count_nonzero(PD), np.count_nonzero(PU))
 
     plt.subplot(511)
     _ = plt.hist(
@@ -1846,7 +1852,7 @@ def get_DAC(ADCP, glider, options):
             dt[idx] = surf_time[idx + 1] - dive_time[idx]
             meant[idx] = (surf_time[idx + 1] + dive_time[idx]) / 2
         except IndexError:
-            print("No final GPS for dive " + str(dx))
+            _log.info("No final GPS for dive " + str(dx))
 
     dac_e = (gps_e - dr_e) / dt
     dac_n = (gps_n - dr_n) / dt
@@ -1941,7 +1947,7 @@ def getSurfaceDrift(glider, options):
     return dE, dN, dT
 
 
-def bottom_track(ADCP, adcp_path, options):
+def bottom_track(ADCP, adcp_file_path, options):
     if options["top_mounted"]:
         plog("ERROR: ADCP is top mounted. Not processing bottom track data")
         return ADCP
@@ -1955,7 +1961,7 @@ def bottom_track(ADCP, adcp_path, options):
     # BT gives us speed of the glider
     # If we subtract BT velocity from XYZ
     # then we get speed of water
-    BT = xr.open_mfdataset(adcp_path, group="Data/AverageBT")
+    BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
 
     thresh = 12
@@ -1983,7 +1989,7 @@ def bottom_track(ADCP, adcp_path, options):
     for idx in range(np.nanmax(ADCP_profile).astype(int)):
         _gd = ADCP_profile == idx
         if np.count_nonzero(_gd) == 0:
-            print("Profile " + str(idx) + " was empty")
+            _log.info("Profile " + str(idx) + " was empty")
         else:
             ADCP_depth[_gd] = np.nanmax(ADCP_depth[_gd])
     ADCP_depth = ADCP_depth[matching]
@@ -2407,7 +2413,7 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
         try:
             out[varname] = grid(varname)
         except IndexError:
-            print('Variable "' + varname + '" failed to grid.')
+            _log.info('Variable "' + varname + '" failed to grid.')
 
     return out
 
@@ -2518,7 +2524,7 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
             plt.subplot(1, 3, idx + 1)
             plt.axvline(0, color="k")
 
-        for idx, d in enumerate(depths):
+        for d in depths:
             depth = np.abs(out["Pressure"] - d) < drange
 
             Nvals = out[var][(north & depth)]
@@ -2571,7 +2577,7 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
         plt.subplot(133)
         plt.axvline(0, color="k")
 
-    for idx, d in enumerate(depths):
+    for d in depths:
         depth = np.abs(out["Pressure"] - d) < drange
 
         Nvals = np.sqrt(out["ADCP_E"] ** 2 + out["ADCP_N"] ** 2)[(north & depth)]
@@ -2665,7 +2671,7 @@ def calc_bias(out, yaxis, taxis, days, options):
             maxiter=100,
             ftol=0.00001,
         )
-    print(R)
+    _log.info(R)
     coeff = R[0]
 
     ADCP_E_old = out["ADCP_E"].copy()
@@ -2764,8 +2770,10 @@ def make_dataset(out):
     return ds
 
 
-def shear_from_adcp(adcp_path, glider_pqt_path, options):
-    ADCP, data, options = load_adcp_glider_data(adcp_path, glider_pqt_path, options)
+def shear_from_adcp(adcp_file_path, glider_file_path, options):
+    ADCP, data, options = load_adcp_glider_data(
+        adcp_file_path, glider_file_path, options
+    )
     ADCP = remapADCPdepth(ADCP, options)
     ADCP = correct_heading(ADCP, data, options)
     ADCP = soundspeed_correction(ADCP)
@@ -2785,8 +2793,8 @@ def grid_shear(ADCP, data, options):
     return ds
 
 
-def velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP):
-    extra_data = pd.read_parquet(glider_pqt_path)
+def velocity_from_shear(adcp_file_path, glider_file_path, options, data, ADCP):
+    extra_data = pd.read_parquet(glider_file_path)
     extra_data.index = data.index
     data["speed_vert"] = extra_data["speed_vert"]
     data["speed_horz"] = extra_data["speed_horz"]
@@ -2796,7 +2804,7 @@ def velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP):
     xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options)
     data = get_DAC(ADCP, data, options)
     dE, dN, dT = getSurfaceDrift(data, options)
-    ADCP = bottom_track(ADCP, adcp_path, options)
+    ADCP = bottom_track(ADCP, adcp_file_path, options)
     out = reference_shear(ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options)
     out = grid_data(ADCP, data, out, xaxis, yaxis)
     out = calc_bias(out, yaxis, taxis, days, options)
