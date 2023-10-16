@@ -1,9 +1,19 @@
-import xarray as xr
 import numpy as np
 import pandas as pd
+import xarray as xr
 
+import gliderad2cp.process_adcp
 from gliderad2cp import process_adcp
 from gliderad2cp.download_example_data import data_source
+
+
+def test_load_csv():
+    df_pqt = gliderad2cp.process_adcp.load(
+        data_source.get_url("glider_profiles_160_to_210.pqt")
+    )
+    csv_file = data_source.path / "test.csv"
+    df_pqt.to_csv(csv_file)
+    gliderad2cp.process_adcp.load(csv_file)
 
 
 def test_processing():

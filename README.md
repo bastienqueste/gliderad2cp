@@ -5,7 +5,7 @@ Processing toolchain for AD2CP data collected from autonomous underwater gliders
 
 3 inputs are required:
 1. A netcdf (.nc) file of Nortek AD2CP data as output by the Nortek MIDAS post-processing software
-2. glider data in a timeseries parquet file (.pqt) file with the following variables: ["time",
+2. glider data in a timeseries csv or parquet file (.pqt) file with the following variables: ["time",
             "temperature",
             "salinity",
             "latitude",
@@ -16,9 +16,11 @@ Processing toolchain for AD2CP data collected from autonomous underwater gliders
             ]
 3. A dictionary of processing options. For examples, see the notebooks described below
 
+**N.B.** if declination data are not present in the datafile, they can be added with the function `process_adcp.get_declination`.
+
 The primary functionality of gliderad2cp is to produce a gridded dataset of velocity shear using data from the glider and AD2CP. This is achieved with two functions:
 
-1. `process_adcp.shear_from_adcp(adcp_path, glider_pqt_path, options)` takes as arguments the three inputs above. It returns processed ADCP and glider data
+1. `process_adcp.shear_from_adcp(adcp_file_path, glider_file_path, options)` takes as arguments the three inputs above. It returns processed ADCP and glider data
 2. `process_adcp.grid_shear(ADCP, data, options)` takes as arguments the output of `shear_from_adcp` and outputs gridded velocity shear
 
 Additionally, gliderad2cp can integrate these profiles of velocity shear into absolute velocity using `process_adcp.velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP)`. This requires estimates of speed through water and the following additional variables in the glider .pqt file: ["speed_vert",

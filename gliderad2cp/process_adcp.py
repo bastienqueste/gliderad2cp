@@ -1,20 +1,21 @@
-import warnings
-from glob import glob
-from tqdm import tqdm
-from datetime import datetime as dt
 import datetime
+import json
+import warnings
+from datetime import datetime as dt
+from glob import glob
+from pathlib import Path
+from urllib import request
+
+import cmocean.cm as cmo
+import gsw
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import xarray as xr
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
-import gsw
-import matplotlib.pyplot as plt
-import seaborn as sns
-import cmocean.cm as cmo
-import json
-from urllib import request
-from pathlib import Path
+from tqdm import tqdm
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
@@ -84,9 +85,12 @@ def get_declination(data, key):
     data["declination"] = declination
 
 
-def load(parquet_file):
-    data = pd.read_parquet(parquet_file)
-    print("Loaded " + parquet_file)
+def load(glider_file):
+    if str(glider_file)[-4:] == ".csv":
+        data = pd.read_csv(glider_file, parse_dates=["time"])
+    else:
+        data = pd.read_parquet(glider_file)
+    print(f"Loaded {glider_file}")
     sel_cols = [
         "time",
         "temperature",
@@ -164,11 +168,11 @@ def plog(msg):
     return None
 
 
-def load_adcp_glider_data(adcp_path, glider_pqt_path, options):
-    glider = load(glider_pqt_path)
+def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
+    glider = load(glider_file_path)
 
-    ADCP = xr.open_mfdataset(adcp_path, group="Data/Average")
-    ADCP_settings = xr.open_mfdataset(glob(adcp_path)[0], group="Config")
+    ADCP = xr.open_mfdataset(adcp_file_path, group="Data/Average")
+    ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
     adcp_time_float = ADCP.time.values.astype("float")
     # if ADCP.time.dtype == '<M8[ns]':
@@ -1941,7 +1945,7 @@ def getSurfaceDrift(glider, options):
     return dE, dN, dT
 
 
-def bottom_track(ADCP, adcp_path, options):
+def bottom_track(ADCP, adcp_file_path, options):
     if options["top_mounted"]:
         plog("ERROR: ADCP is top mounted. Not processing bottom track data")
         return ADCP
@@ -1955,7 +1959,7 @@ def bottom_track(ADCP, adcp_path, options):
     # BT gives us speed of the glider
     # If we subtract BT velocity from XYZ
     # then we get speed of water
-    BT = xr.open_mfdataset(adcp_path, group="Data/AverageBT")
+    BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
 
     thresh = 12
@@ -2764,8 +2768,10 @@ def make_dataset(out):
     return ds
 
 
-def shear_from_adcp(adcp_path, glider_pqt_path, options):
-    ADCP, data, options = load_adcp_glider_data(adcp_path, glider_pqt_path, options)
+def shear_from_adcp(adcp_file_path, glider_file_path, options):
+    ADCP, data, options = load_adcp_glider_data(
+        adcp_file_path, glider_file_path, options
+    )
     ADCP = remapADCPdepth(ADCP, options)
     ADCP = correct_heading(ADCP, data, options)
     ADCP = soundspeed_correction(ADCP)
@@ -2785,8 +2791,8 @@ def grid_shear(ADCP, data, options):
     return ds
 
 
-def velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP):
-    extra_data = pd.read_parquet(glider_pqt_path)
+def velocity_from_shear(adcp_file_path, glider_file_path, options, data, ADCP):
+    extra_data = pd.read_parquet(glider_file_path)
     extra_data.index = data.index
     data["speed_vert"] = extra_data["speed_vert"]
     data["speed_horz"] = extra_data["speed_horz"]
@@ -2796,9 +2802,13 @@ def velocity_from_shear(adcp_path, glider_pqt_path, options, data, ADCP):
     xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options)
     data = get_DAC(ADCP, data, options)
     dE, dN, dT = getSurfaceDrift(data, options)
-    ADCP = bottom_track(ADCP, adcp_path, options)
+    ADCP = bottom_track(ADCP, adcp_file_path, options)
     out = reference_shear(ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options)
     out = grid_data(ADCP, data, out, xaxis, yaxis)
     out = calc_bias(out, yaxis, taxis, days, options)
     ds = make_dataset(out)
     return ds
+
+
+if __name__ == "__main__":
+    load("/home/callum/.cache/gliderad2cp/test.csv")
