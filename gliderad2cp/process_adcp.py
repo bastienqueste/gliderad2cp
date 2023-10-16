@@ -56,6 +56,20 @@ sns.set(
 y_res = 1
 plot_num = 0
 _log = logging.getLogger(__name__)
+default_options = {
+    "debug_plots": True,
+    "correctADCPHeading": True,
+    "ADCP_discardFirstBins": 0,
+    "ADCP_correlationThreshold": 70,
+    "ADCP_amplitudeThreshold": 75,
+    "ADCP_velocityThreshold": 0.8,
+    "correctXshear": False,
+    "correctYshear": False,
+    "correctZshear": False,
+    "correctZZshear": False,
+    "ADCP_regrid_correlation_threshold": 20,
+    "plots_directory": "plots",
+}
 
 
 def save_plot(plot_dir, plot_name):
@@ -2770,7 +2784,9 @@ def make_dataset(out):
     return ds
 
 
-def shear_from_adcp(adcp_file_path, glider_file_path, options):
+def shear_from_adcp(adcp_file_path, glider_file_path, options=None):
+    if not options:
+        options = default_options
     ADCP, data, options = load_adcp_glider_data(
         adcp_file_path, glider_file_path, options
     )
@@ -2786,14 +2802,18 @@ def shear_from_adcp(adcp_file_path, glider_file_path, options):
     return ADCP, data
 
 
-def grid_shear(ADCP, data, options):
-    xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options)
+def grid_shear(ADCP, data, options=None):
+    if not options:
+        options = default_options
+    xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options=options)
     out = grid_data(ADCP, data, {}, xaxis, yaxis)
     ds = make_dataset(out)
     return ds
 
 
-def velocity_from_shear(adcp_file_path, glider_file_path, options, data, ADCP):
+def velocity_from_shear(adcp_file_path, glider_file_path, ADCP, data, options=None):
+    if not options:
+        options = default_options
     extra_data = pd.read_parquet(glider_file_path)
     extra_data.index = data.index
     data["speed_vert"] = extra_data["speed_vert"]
