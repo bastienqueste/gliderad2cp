@@ -100,3 +100,4 @@ cython_debug/
 .idea/
 plots
 _version.py
+test.csv

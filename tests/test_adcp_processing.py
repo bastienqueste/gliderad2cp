@@ -11,7 +11,7 @@ def test_load_csv():
     df_pqt = gliderad2cp.process_adcp.load(
         data_source.get_url("glider_profiles_160_to_210.pqt")
     )
-    csv_file = data_source.path / "test.csv"
+    csv_file = "test.csv"
     df_pqt.to_csv(csv_file)
     gliderad2cp.process_adcp.load(csv_file)
 
