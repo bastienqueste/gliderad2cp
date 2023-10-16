@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -14,6 +16,14 @@ def test_load_csv():
     csv_file = "test.csv"
     df_pqt.to_csv(csv_file)
     gliderad2cp.process_adcp.load(csv_file)
+
+
+def test_get_declination():
+    api_key = os.environ["GEOMAG_API_KEY"]
+    df_pqt = gliderad2cp.process_adcp.load(
+        data_source.get_url("glider_profiles_160_to_210.pqt")
+    ).drop(["declination"], axis=1)
+    process_adcp.get_declination(df_pqt, api_key)
 
 
 def test_processing():
