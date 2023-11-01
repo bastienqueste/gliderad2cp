@@ -10,9 +10,10 @@ requires = [
 name = "gliderad2cp"
 description = "process glider AD2CP data"
 readme = "README.md"
-license = {file = "LICENSE.txt"}
-authors = [
+license = {file = "LICENSE"}
+maintainers = [
     {name = "Callum Rollo", email = "c.rollo@outlook.com"},
+    {name = "Bastien Queste", email = "bastien.queste@gu.se"},
 ]
 requires-python = ">=3.8"
 classifiers = [
