@@ -1119,12 +1119,12 @@ def correct_backscatter(ADCP, glider, options):
             freq=1000,
             S=interp(
                 glider.time.values.astype("float"),
-                glider.salinity.interpolate("index").fillna(method="bfill").values,
+                glider.salinity.interpolate("index").bfill().values,
                 ADCP.time.values.astype("float"),
             ),
             T=interp(
                 glider.time.values.astype("float"),
-                glider.temperature.interpolate("index").fillna(method="bfill").values,
+                glider.temperature.interpolate("index").bfill().values,
                 ADCP.time.values.astype("float"),
             ),
             pH=8.1,
@@ -1595,7 +1595,7 @@ def calcENUfromXYZ(ADCP, glider, options):
         ADCP.Sh_N.values[x, :].flatten(),
         xi=1,
         yi=3,
-        fn=np.nanmean,
+        fn="mean",
     )
 
     isnan = np.isnan(SHEm)
@@ -1786,7 +1786,7 @@ def get_DAC(ADCP, glider, options):
     ## Calculate full x-y dead reckoning during each dive
     def reset_transport_at_GPS(arr):
         def ffill(arr):
-            return pd.DataFrame(arr).fillna(method="ffill").values.flatten()
+            return pd.DataFrame(arr).ffill().values.flatten()
 
         ref = np.zeros(np.shape(arr)) * np.NaN
         ref[_gps] = arr[_gps]
@@ -1873,8 +1873,8 @@ def get_DAC(ADCP, glider, options):
     glider["DAC_E"] = interp(meant, (gps_e - dr_e) / dt, t)
     glider["DAC_N"] = interp(meant, (gps_n - dr_n) / dt, t)
 
-    glider["DAC_E"] = glider["DAC_E"].fillna(method="bfill").fillna(method="ffill")
-    glider["DAC_N"] = glider["DAC_N"].fillna(method="bfill").fillna(method="ffill")
+    glider["DAC_E"] = glider["DAC_E"].bfill().ffill()
+    glider["DAC_N"] = glider["DAC_N"].bfill().ffill()
 
     plt.figure(figsize=(15, 7))
 
@@ -2098,7 +2098,7 @@ def grid_shear_data(ADCP, glider, options):
         ADCP.Sh_E.values[x, :].flatten(),
         xi=1,
         yi=5,
-        fn=np.nanmean,
+        fn="mean",
     )
     SHEs, XI, YI = grid2d(
         np.tile(ADCP.profile_number.values, (len(ADCP.gridded_bin), 1))
@@ -2108,7 +2108,7 @@ def grid_shear_data(ADCP, glider, options):
         ADCP.Sh_E.values[x, :].flatten(),
         xi=1,
         yi=5,
-        fn=np.nanstd,
+        fn="std",
     )
     SHEn, XI, YI = grid2d(
         np.tile(ADCP.profile_number.values, (len(ADCP.gridded_bin), 1))
