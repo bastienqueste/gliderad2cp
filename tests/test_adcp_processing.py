@@ -23,7 +23,6 @@ def test_get_declination():
     df_pqt = gliderad2cp.process_adcp.load(
         data_source.get_url("glider_profiles_160_to_210.pqt")
     ).drop(["declination"], axis=1)
-
     process_adcp.get_declination(df_pqt, api_key)
 
 
