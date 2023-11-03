@@ -8,6 +8,4 @@ pandas
 pooch
 pyarrow
 scipy
-seaborn
-tqdm
 xarray

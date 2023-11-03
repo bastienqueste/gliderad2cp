@@ -9,6 +9,4 @@ pooch
 pyarrow
 pytest
 scipy
-seaborn
-tqdm
 xarray

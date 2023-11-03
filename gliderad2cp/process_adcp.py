@@ -12,11 +12,9 @@ import gsw
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import xarray as xr
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
-from tqdm import tqdm
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
@@ -25,34 +23,7 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
-sns.set(
-    font="Franklin Gothic Book",
-    rc={
-        "axes.axisbelow": False,
-        "axes.edgecolor": "Black",
-        "axes.facecolor": "lightgrey",
-        "axes.grid": False,
-        "axes.labelcolor": "darkgrey",
-        "axes.spines.right": True,
-        "axes.spines.top": True,
-        "figure.facecolor": "white",
-        "lines.solid_capstyle": "round",
-        "patch.edgecolor": "k",
-        "patch.force_edgecolor": True,
-        "text.color": "dimgrey",
-        "xtick.bottom": False,
-        "xtick.color": "dimgrey",
-        "xtick.direction": "out",
-        "xtick.top": False,
-        "ytick.color": "dimgrey",
-        "ytick.direction": "out",
-        "ytick.left": False,
-        "ytick.right": False,
-        "axes.labelsize": 18,
-        "legend.fontsize": 16,
-    },
-    font_scale=1,
-)
+
 y_res = 1
 plot_num = 0
 _log = logging.getLogger(__name__)
@@ -1995,7 +1966,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     full_time = ADCP["time"].values.astype("float")
     BT_time = BT["time"].values.astype("float")
     matching = []
-    for idx in tqdm(range(len(BT_time))):
+    for idx in range(len(BT_time)):
         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
 
     ADCP_profile = ADCP["profile_number"].values.copy()
@@ -2013,7 +1984,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     full_time = ADCP["time"].values.astype("float")
     BT_time = BT["time"].values.astype("float")
     matching = []
-    for idx in tqdm(range(len(BT_time))):
+    for idx in range(len(BT_time)):
         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
 
     C_old = BT["SpeedOfSound"].values
@@ -2066,7 +2037,7 @@ def bottom_track(ADCP, adcp_file_path, options):
         direction = -1
 
     n = len(BT_X4)
-    for i in tqdm(range(n)):
+    for i in range(n):
         BT_E[i], BT_N[i], BT_U[i] = M_xyz2enu(H[i], P[i], R[i]) @ [
             BT_X4[i],
             BT_Y4[i] * direction,
@@ -2423,7 +2394,7 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
             fn="mean",
         )[0]
 
-    for varname in tqdm(variables):
+    for varname in variables:
         try:
             out[varname] = grid(varname)
         except IndexError:
@@ -2671,17 +2642,10 @@ def calc_bias(out, yaxis, taxis, days, options):
 
     from scipy.optimize import fmin
 
-    with tqdm(total=100) as pbar:
-
-        def callbackF(Xi):
-            pbar.update(1)
-
+    for _i in range(100):
         R = fmin(
             fn,
             1,
-            callback=callbackF,
-            disp=True,
-            full_output=True,
             maxiter=100,
             ftol=0.00001,
         )
