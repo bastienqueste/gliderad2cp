@@ -1,4 +1,5 @@
 cmocean
+dask
 gsw
 matplotlib
 netcdf4
