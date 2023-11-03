@@ -33,6 +33,10 @@ date: 18 October 2023
 bibliography: paper.bib
 ---
 
+# Notes and TODO
+
+Suggested reviewers: Laur Ferris, ?
+
 # Summary
 
 Oceanographers routinely measure ocean currents to understand and map the transport of ocean properties. Measuring currents is most commonly done using instrument called acoustic doppler current profilers (ADCP). These instruments emit shorts pings of sound and listen for the echoing soundwaves which bounce off of water molecules and suspended particles. These return echoes contain much valuable information. The delay between emission and receiving tells us distance to the particles, and the pitch change of the echo tells us the relative velocity of the particles to the sensor. Using multiple beams of sounds, the ADCP can determine 3-dimensional currents at range. ADCP are however limited by power and size; there is a direct trade-off between size, power and transducer capability. There is a also a trade-off between ping frequency and effective range before the soudn wave is attenuated. Large ocean going vessels can carry low frequency ADCP with ranges of hundreds of meters down into the water column, but with resolutions in the tens of meters.
@@ -41,7 +45,7 @@ Ocean gliders are small, low power, autonomous underwater vehicles which glider 
 - Clean the ADCP data and remove bad measurements.
 - Correct the vertical alignment (in the earth frame of reference) of velocity measurements across all beams.
 - Convert the velocity data from ADCP-relative (*ie*. beam direction; Fig. \autoref{fig:beam2xyz}), to glider-relative (*ie*. X, Y, Z) and finally to earth-relative velocities (*ie*. East, North, Up).
-- Calculate the vertical gradient in earth-relative velocities, also known as vertical shear (*ie*. $$\frac{\delta v}{\delta z}$$).
+- Calculate the vertical gradient in earth-relative velocities, also known as vertical shear.
 - Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference.
 - Determine the mean ocean current over the period of the glider dive by comparing ADCP-derived glider speed through water to its GPS-derived speed over land, the difference being caused by ocean currents.
 - Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents.
@@ -62,70 +66,6 @@ This toolbox integrates work performed at GU, VOTO, but also Tanaka and Todd whi
 
 @Callum : need to integrate new OceanGlider format as input to make it nicely platform independent. What's update on new format specification?
 
-# Package description
-
-## Quality control
-
-- Velocity
-
-- Amplitude
-
-- Correlation
-
-- Issues with first bin and side lobe interference
-
-## Coordinate transformations
-
-- Regridding to avoid shear smearing.
-
-Shear smearing
-
-![The Nortek AD2CP measurements are time-gated at the same intervals for each individual beam, meaning that the relation between echo delay and measurement range is the same for all 4 beams and does not account for the more open front and back beam angles. The purpose is to have 3 beams at equal angles from vertical when the glider is diving at the correct angle (17.4$$^\circ$$ from horizontal for the Nortek AD2CP; in grey on the left). If the glider is flying at a different angle, there will be a mismatch in depth between the 3 beams (in gray on the right) which requires regridding and use of different bins (in green on the right) to minimise shear smearing.\label{fig:regridding}](paper_figures/regridding.png)
-
-- Standard matrices for the Nortek AD2CP.
-
-@Callum: should we add functionality to extract coordinate transform matrix from netCDF metadata or keep it hard coded?
-
-## Integration with glider data
-
-- What is necessary format of glider data, why do we require these variables
-
-- Lat and lon data needed where/when and need for accurate GPS data?
-
-# Usage
-
-## Assessing shear data quality
-
-- Example code
-
-- Figure list and description
-
-## Obtaining referenced velocities
-
-
-![L-ADCP method.\label{fig:ladcp}](paper_figures/lADCP.png)
-
-- Built in DVL approach to calculate DAC and reference
-
-- Using glider flight model
-
-- Using fixed point reference
-
-- Using bottom tracking
-
-- Visbeck LSQ approach to multiple constraints
-
-# Known issues
-
-- Shear bias
-
-- Compass calibrations
-
-Figures can be included like this:
-
-![Caption for example figure.\label{fig:example}](paper_figures/blank.png)
-
-and referenced from text using \autoref{fig:example}.
 
 # Final words
 
