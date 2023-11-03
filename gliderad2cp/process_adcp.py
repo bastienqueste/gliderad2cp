@@ -1830,10 +1830,10 @@ def get_DAC(ADCP, glider, options):
             dr_n[idx] = dn[sidx[idx + 1] - 1]
             gps_e[idx] = (surf_lon[idx + 1] - dive_lon[idx]) * lon2m(
                 dive_lon[idx], dive_lat[idx]
-            )
+            )[0]
             gps_n[idx] = (surf_lat[idx + 1] - dive_lat[idx]) * lat2m(
                 dive_lon[idx], dive_lat[idx]
-            )
+            )[0]
             dt[idx] = surf_time[idx + 1] - dive_time[idx]
             meant[idx] = (surf_time[idx + 1] + dive_time[idx]) / 2
         except IndexError:
@@ -1902,8 +1902,8 @@ def getSurfaceDrift(glider, options):
     dlats = np.gradient(lats)
 
     for idx in range(len(lons)):
-        dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])
-        dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])
+        dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
+        dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
 
     times = glider.time.values.astype("float")[_gps] / 10**9
     dtimes = np.gradient(times)
@@ -2639,8 +2639,6 @@ def calc_bias(out, yaxis, taxis, days, options):
             out["ADCP_E"] + get_bias(out["speed_e"], coeff),
             out["ADCP_N"] + get_bias(out["speed_n"], coeff),
         )
-
-    from scipy.optimize import fmin
 
     for _i in range(100):
         R = fmin(
