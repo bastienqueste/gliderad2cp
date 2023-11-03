@@ -20,7 +20,7 @@ import datetime
 
 year = datetime.date.today().year
 project = "gliderad2cp"
-author = " Bastien Queste, Estel Font and Callum Rollo"
+author = " Bastien Queste, Callum Rollo and Estel Font"
 copyright = f"{year}, {author}"  # noqa
 
 # The full version, including alpha/beta/rc tags
