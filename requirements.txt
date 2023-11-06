@@ -1,4 +1,3 @@
-cmocean
 dask
 gsw
 matplotlib

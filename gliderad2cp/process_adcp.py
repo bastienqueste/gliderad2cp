@@ -7,7 +7,6 @@ from glob import glob
 from pathlib import Path
 from urllib import request
 
-import cmocean.cm as cmo
 import gsw
 import matplotlib.pyplot as plt
 import numpy as np
@@ -740,7 +739,7 @@ def plot_data_density(ADCP, options):
 
     plt.figure(figsize=(35, 12))
     plt.subplot(121)
-    plt.pcolormesh(CNT, cmap=cmo.tarn)
+    plt.pcolormesh(CNT, cmap="viridis")
     plt.colorbar(label="observations per cell")
     plt.gca().invert_yaxis()
     plt.clim(0, 30)
@@ -888,7 +887,7 @@ def _shear_correction(ADCP, var, correct=True):
         _gd = ADCP["Depth"] > 5
 
         ### MAKE FIGURE
-        colormap = cmo.speed
+        colormap = "viridis"
         alpha = 30 / len(full_range)
         if alpha > 1.0:
             alpha = 0.5
@@ -1744,7 +1743,7 @@ def verify_calcENUfromXYZ(ADCP, options):
         save_plot(options["plots_directory"], "vertical_speed_compare")
 
     plt.figure(figsize=(20, 8))
-    plt.scatter(T, D, 5, dP - U, cmap=cmo.balance)
+    plt.scatter(T, D, 5, dP - U, cmap="RdBu")
     plt.colorbar(label="dz/dt - U (m s$^{-1}$)")
     plt.clim([bins[0] / 10, bins[-1] / 10])
     plt.gca().invert_yaxis()
@@ -1871,12 +1870,12 @@ def get_DAC(ADCP, glider, options):
         plt.legend(("DAC E", "DAC N"))
 
         plt.subplot(211)
-        plt.scatter(X, Y, 100, E, cmap=cmo.balance)
+        plt.scatter(X, Y, 100, E, cmap="RdBu")
         plt.colorbar()
         plt.title("East")
 
         plt.subplot(212)
-        plt.scatter(X, Y, 100, N, cmap=cmo.balance)
+        plt.scatter(X, Y, 100, N, cmap="RdBu")
         plt.colorbar()
         plt.title("North")
         if options["plots_directory"]:
@@ -2103,7 +2102,7 @@ def grid_shear_data(ADCP, glider, options):
         plt.gca().invert_yaxis()
 
         plt.subplot(223)
-        plt.pcolormesh(XI, YI, SHEm, cmap=cmo.balance)
+        plt.pcolormesh(XI, YI, SHEm, cmap="RdBu")
         plt.colorbar(label="mean eastward velocity shear")
         plt.ylim([0, max_depth])
         plt.clim([-0.05, 0.05])
@@ -2215,7 +2214,7 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         if options["debug_plots"]:
             ## PLOT 1
             plt.subplot(6, 1, pstep + 1)
-            plt.pcolormesh(taxis, yaxis, V, cmap=cmo.balance, shading="auto")
+            plt.pcolormesh(taxis, yaxis, V, cmap="RdBu", shading="auto")
             plt.clim(np.array([-1, 1]) * 0.5)
             plt.colorbar()
             [plt.axvline(x, color="k", alpha=0.3) for x in days]
@@ -2680,7 +2679,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.figure(figsize=(20, 20))
         ## PLOT 1
         plt.subplot(6, 1, 1)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap=cmo.balance, shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]
@@ -2698,7 +2697,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.title("Eastward velocity (m.s-1)")
 
         plt.subplot(6, 1, 2)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap=cmo.balance, shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]
