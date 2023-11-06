@@ -7,16 +7,13 @@ from glob import glob
 from pathlib import Path
 from urllib import request
 
-import cmocean.cm as cmo
 import gsw
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import xarray as xr
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
-from tqdm import tqdm
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
@@ -25,34 +22,7 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
-sns.set(
-    font="Franklin Gothic Book",
-    rc={
-        "axes.axisbelow": False,
-        "axes.edgecolor": "Black",
-        "axes.facecolor": "lightgrey",
-        "axes.grid": False,
-        "axes.labelcolor": "darkgrey",
-        "axes.spines.right": True,
-        "axes.spines.top": True,
-        "figure.facecolor": "white",
-        "lines.solid_capstyle": "round",
-        "patch.edgecolor": "k",
-        "patch.force_edgecolor": True,
-        "text.color": "dimgrey",
-        "xtick.bottom": False,
-        "xtick.color": "dimgrey",
-        "xtick.direction": "out",
-        "xtick.top": False,
-        "ytick.color": "dimgrey",
-        "ytick.direction": "out",
-        "ytick.left": False,
-        "ytick.right": False,
-        "axes.labelsize": 18,
-        "legend.fontsize": 16,
-    },
-    font_scale=1,
-)
+
 y_res = 1
 plot_num = 0
 _log = logging.getLogger(__name__)
@@ -769,7 +739,7 @@ def plot_data_density(ADCP, options):
 
     plt.figure(figsize=(35, 12))
     plt.subplot(121)
-    plt.pcolormesh(CNT, cmap=cmo.tarn)
+    plt.pcolormesh(CNT, cmap="viridis")
     plt.colorbar(label="observations per cell")
     plt.gca().invert_yaxis()
     plt.clim(0, 30)
@@ -917,7 +887,7 @@ def _shear_correction(ADCP, var, correct=True):
         _gd = ADCP["Depth"] > 5
 
         ### MAKE FIGURE
-        colormap = cmo.speed
+        colormap = "viridis"
         alpha = 30 / len(full_range)
         if alpha > 1.0:
             alpha = 0.5
@@ -1773,7 +1743,7 @@ def verify_calcENUfromXYZ(ADCP, options):
         save_plot(options["plots_directory"], "vertical_speed_compare")
 
     plt.figure(figsize=(20, 8))
-    plt.scatter(T, D, 5, dP - U, cmap=cmo.balance)
+    plt.scatter(T, D, 5, dP - U, cmap="RdBu")
     plt.colorbar(label="dz/dt - U (m s$^{-1}$)")
     plt.clim([bins[0] / 10, bins[-1] / 10])
     plt.gca().invert_yaxis()
@@ -1859,10 +1829,10 @@ def get_DAC(ADCP, glider, options):
             dr_n[idx] = dn[sidx[idx + 1] - 1]
             gps_e[idx] = (surf_lon[idx + 1] - dive_lon[idx]) * lon2m(
                 dive_lon[idx], dive_lat[idx]
-            )
+            )[0]
             gps_n[idx] = (surf_lat[idx + 1] - dive_lat[idx]) * lat2m(
                 dive_lon[idx], dive_lat[idx]
-            )
+            )[0]
             dt[idx] = surf_time[idx + 1] - dive_time[idx]
             meant[idx] = (surf_time[idx + 1] + dive_time[idx]) / 2
         except IndexError:
@@ -1900,12 +1870,12 @@ def get_DAC(ADCP, glider, options):
         plt.legend(("DAC E", "DAC N"))
 
         plt.subplot(211)
-        plt.scatter(X, Y, 100, E, cmap=cmo.balance)
+        plt.scatter(X, Y, 100, E, cmap="RdBu")
         plt.colorbar()
         plt.title("East")
 
         plt.subplot(212)
-        plt.scatter(X, Y, 100, N, cmap=cmo.balance)
+        plt.scatter(X, Y, 100, N, cmap="RdBu")
         plt.colorbar()
         plt.title("North")
         if options["plots_directory"]:
@@ -1931,8 +1901,8 @@ def getSurfaceDrift(glider, options):
     dlats = np.gradient(lats)
 
     for idx in range(len(lons)):
-        dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])
-        dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])
+        dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
+        dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
 
     times = glider.time.values.astype("float")[_gps] / 10**9
     dtimes = np.gradient(times)
@@ -1995,7 +1965,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     full_time = ADCP["time"].values.astype("float")
     BT_time = BT["time"].values.astype("float")
     matching = []
-    for idx in tqdm(range(len(BT_time))):
+    for idx in range(len(BT_time)):
         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
 
     ADCP_profile = ADCP["profile_number"].values.copy()
@@ -2013,7 +1983,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     full_time = ADCP["time"].values.astype("float")
     BT_time = BT["time"].values.astype("float")
     matching = []
-    for idx in tqdm(range(len(BT_time))):
+    for idx in range(len(BT_time)):
         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
 
     C_old = BT["SpeedOfSound"].values
@@ -2066,7 +2036,7 @@ def bottom_track(ADCP, adcp_file_path, options):
         direction = -1
 
     n = len(BT_X4)
-    for i in tqdm(range(n)):
+    for i in range(n):
         BT_E[i], BT_N[i], BT_U[i] = M_xyz2enu(H[i], P[i], R[i]) @ [
             BT_X4[i],
             BT_Y4[i] * direction,
@@ -2132,7 +2102,7 @@ def grid_shear_data(ADCP, glider, options):
         plt.gca().invert_yaxis()
 
         plt.subplot(223)
-        plt.pcolormesh(XI, YI, SHEm, cmap=cmo.balance)
+        plt.pcolormesh(XI, YI, SHEm, cmap="RdBu")
         plt.colorbar(label="mean eastward velocity shear")
         plt.ylim([0, max_depth])
         plt.clim([-0.05, 0.05])
@@ -2244,7 +2214,7 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         if options["debug_plots"]:
             ## PLOT 1
             plt.subplot(6, 1, pstep + 1)
-            plt.pcolormesh(taxis, yaxis, V, cmap=cmo.balance, shading="auto")
+            plt.pcolormesh(taxis, yaxis, V, cmap="RdBu", shading="auto")
             plt.clim(np.array([-1, 1]) * 0.5)
             plt.colorbar()
             [plt.axvline(x, color="k", alpha=0.3) for x in days]
@@ -2423,7 +2393,7 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
             fn="mean",
         )[0]
 
-    for varname in tqdm(variables):
+    for varname in variables:
         try:
             out[varname] = grid(varname)
         except IndexError:
@@ -2669,19 +2639,10 @@ def calc_bias(out, yaxis, taxis, days, options):
             out["ADCP_N"] + get_bias(out["speed_n"], coeff),
         )
 
-    from scipy.optimize import fmin
-
-    with tqdm(total=100) as pbar:
-
-        def callbackF(Xi):
-            pbar.update(1)
-
+    for _i in range(100):
         R = fmin(
             fn,
             1,
-            callback=callbackF,
-            disp=True,
-            full_output=True,
             maxiter=100,
             ftol=0.00001,
         )
@@ -2718,7 +2679,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.figure(figsize=(20, 20))
         ## PLOT 1
         plt.subplot(6, 1, 1)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap=cmo.balance, shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]
@@ -2736,7 +2697,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.title("Eastward velocity (m.s-1)")
 
         plt.subplot(6, 1, 2)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap=cmo.balance, shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]

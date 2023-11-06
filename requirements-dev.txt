@@ -1,4 +1,3 @@
-cmocean
 dask
 gsw
 matplotlib
@@ -6,9 +5,8 @@ netcdf4
 numpy
 pandas
 pooch
+pre-commit
 pyarrow
 pytest
 scipy
-seaborn
-tqdm
 xarray

@@ -1,4 +1,3 @@
-cmocean
 dask
 gsw
 matplotlib
@@ -8,6 +7,4 @@ pandas
 pooch
 pyarrow
 scipy
-seaborn
-tqdm
 xarray
