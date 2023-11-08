@@ -519,7 +519,12 @@ def _heading_correction(ADCP, glider, options):
         x, y, z = calibrate(MagX, MagY, MagZ, coeffs)
         return rmsd(x, y, z)
 
-    coeffs = fmin(minimisation, np.array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]))
+    coeffs = fmin(
+        minimisation,
+        np.array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]),
+        disp=False,
+        retall=False,
+    )
     _log.info(np.reshape(coeffs[:9], (3, 3)))
     _log.info(coeffs[-3:])
 
@@ -1846,8 +1851,6 @@ def get_DAC(ADCP, glider, options):
     glider["DAC_E"] = glider["DAC_E"].bfill().ffill()
     glider["DAC_N"] = glider["DAC_N"].bfill().ffill()
 
-    plt.figure(figsize=(15, 7))
-
     E, X, Y = grid2d(
         glider.time.values.astype("float"),
         glider.latitude,
@@ -1864,17 +1867,19 @@ def get_DAC(ADCP, glider, options):
         yi=0.01,
     )
     if options["debug_plots"]:
+        plt.close("all")
         plt.figure(figsize=(15, 6))
-        plt.plot(pd.to_datetime(meant), dac_e, "o-r")
-        plt.plot(pd.to_datetime(meant), dac_n, "o-b")
-        plt.legend(("DAC E", "DAC N"))
+        ax = plt.subplot(311)
+        ax.plot(pd.to_datetime(meant), dac_e, "o-r")
+        ax.plot(pd.to_datetime(meant), dac_n, "o-b")
+        ax.legend(("DAC E", "DAC N"))
 
-        plt.subplot(211)
+        plt.subplot(312)
         plt.scatter(X, Y, 100, E, cmap="RdBu")
         plt.colorbar()
         plt.title("East")
 
-        plt.subplot(212)
+        plt.subplot(313)
         plt.scatter(X, Y, 100, N, cmap="RdBu")
         plt.colorbar()
         plt.title("North")
@@ -2645,6 +2650,8 @@ def calc_bias(out, yaxis, taxis, days, options):
             1,
             maxiter=100,
             ftol=0.00001,
+            disp=False,
+            retall=False,
         )
     _log.info(R)
     coeff = R[0]
