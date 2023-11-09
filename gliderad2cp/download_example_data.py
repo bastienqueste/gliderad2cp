@@ -1,16 +1,6 @@
 import pooch
-import requests
 
-# If faster server (callumrollo.com) is available, use it, otherwise default to zenodo
-if (
-    requests.get(
-        "https://callumrollo.com/files/processed_velocity_160_to_210.nc"
-    ).status_code
-    == 200
-):
-    server = "https://callumrollo.com/files/"
-else:
-    server = "https://zenodo.org/record/8431329/files/"
+server = "https://zenodo.org/record/8431329/files/"
 data_source = pooch.create(
     path=pooch.os_cache("gliderad2cp"),
     base_url=server,
