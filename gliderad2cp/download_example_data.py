@@ -1,6 +1,6 @@
 import pooch
 
-server = "https://zenodo.org/record/8431329/files/"
+server = "https://zenodo.org/record/10101320/files/"
 data_source = pooch.create(
     path=pooch.os_cache("gliderad2cp"),
     base_url=server,
