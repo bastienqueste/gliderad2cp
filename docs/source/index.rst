@@ -77,15 +77,33 @@ Vertical shear of horizontal velocities is calculated by gridded the ENU relativ
 
 ``process_adcp.grid_shear_data(ADCP, data, options)``
 
-Profiles of velocity shear are integrated vertically to render vertical profiles of velocity. However, these vertical velocity profiles are relative and must be referenced to an absolute velocity
+Profiles of velocity shear are integrated vertically to render vertical profiles of velocity using the lADP method. These vertical velocity profiles are relative and must be referenced to an absolute velocity
 
-6. Determine mean ocean current
+
+.. image::  ../../paper_figures/lADCP.png
+
+6. Obtain reference velocities
 -------------------------------------
+
+Several methods can be used to obtain a velocity reference for the shear profiles. Oneis to determine mean ocean current
+
 `process_adcp.get_DAC(ADCP, data, options)`
 
 One source of absolute velocity estimate is the glider dive average current (DAC). Estimation of DAC depends on a flight model for the glider.
 Using this flight model, one can calculate the expected surfacing location of a glider from a known start position. The difference between this position
 and the actual surfacing location of the glider is caused by ocean currents, so the vertically averaged horizontal velocity can be estimated.
+
+Alternative sources of reference velocities:
+
+- Built in DVL approach to calculate DAC and reference
+
+- Using glider flight model
+
+- Using fixed point reference
+
+- Using bottom tracking
+
+- Visbeck LSQ approach to multiple constraints
 
 7. Reference velocity profiles to mean current
 -----------------------------------------------
@@ -94,12 +112,6 @@ and the actual surfacing location of the glider is caused by ocean currents, so 
 The dive average current calculated in step 6. is used to reference the relative velocity profiles calculated in step 5. thus calculating earth relative absolute current velocities.
 
 
-Integration with glider data
---------------------------------
-
-- What is necessary format of glider data, why do we require these variables
-
-- Lat and lon data needed where/when and need for accurate GPS data?
 
 Usage
 =======
@@ -114,29 +126,12 @@ Assessing shear data quality
 Obtaining referenced velocities
 --------------------------------
 
-LADCP method
-
-.. image::  ../../paper_figures/lADCP.png
-
-
-
-- Built in DVL approach to calculate DAC and reference
-
-- Using glider flight model
-
-- Using fixed point reference
-
-- Using bottom tracking
-
-- Visbeck LSQ approach to multiple constraints
-
 Known issues
 ---------------
+
 - Shear bias
 
 - Compass calibrations
-
-
 
 .. toctree::
    :maxdepth: 3
