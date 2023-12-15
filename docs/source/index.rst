@@ -130,17 +130,21 @@ LADCP method
 
 - Visbeck LSQ approach to multiple constraints
 
+
+Example processing notebook
+=============================
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contents:
+
+   example_processing
+
 Known issues
 ---------------
 - Shear bias
 
 - Compass calibrations
-
-
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Contents:
 
 Indices and tables
 ==================
