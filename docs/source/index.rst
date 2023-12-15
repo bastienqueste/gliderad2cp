@@ -85,7 +85,7 @@ Profiles of velocity shear are integrated vertically to render vertical profiles
 6. Obtain reference velocities
 -------------------------------------
 
-Several methods can be used to obtain a velocity reference for the shear profiles. Oneis to determine mean ocean current
+Several methods can be used to obtain a velocity reference for the shear profiles. One is to determine mean ocean current
 
 `process_adcp.get_DAC(ADCP, data, options)`
 
@@ -93,7 +93,7 @@ One source of absolute velocity estimate is the glider dive average current (DAC
 Using this flight model, one can calculate the expected surfacing location of a glider from a known start position. The difference between this position
 and the actual surfacing location of the glider is caused by ocean currents, so the vertically averaged horizontal velocity can be estimated.
 
-Alternative sources of reference velocities:
+Alternative sources of reference velocities include:
 
 - Built in DVL approach to calculate DAC and reference
 
@@ -107,6 +107,7 @@ Alternative sources of reference velocities:
 
 7. Reference velocity profiles to mean current
 -----------------------------------------------
+
 ``process_adcp.reference_shear(ADCP, data, dE,dN,dT, xaxis, yaxis, taxis, options)``
 
 The dive average current calculated in step 6. is used to reference the relative velocity profiles calculated in step 5. thus calculating earth relative absolute current velocities.
@@ -128,7 +129,6 @@ Obtaining referenced velocities
 
 Known issues
 ---------------
-
 - Shear bias
 
 - Compass calibrations
