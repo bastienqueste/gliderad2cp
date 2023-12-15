@@ -21,9 +21,6 @@ jobs:
 
     - name: Setup Micromamba
       uses: mamba-org/setup-micromamba@v1
-      with:
-        # all supported versions are fetched from https://github.com/mamba-org/micromamba-releases/releases now and contain the build number
-        micromamba-version: '1.7.3'
 
     - name: Python ${{ matrix.python-version }}
       shell: bash -l {0}
