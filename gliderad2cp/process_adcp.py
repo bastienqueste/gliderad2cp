@@ -43,6 +43,7 @@ default_options = {
 
 
 def save_plot(plot_dir, plot_name):
+    """utility function to save plots to a user defined directory"""
     global plot_num
     plot_num += 1
     plt.savefig(f"{plot_dir}/{str(plot_num).zfill(2)}_{plot_name}.png")
