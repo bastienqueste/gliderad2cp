@@ -20,9 +20,10 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Micromamba
-      uses: mamba-org/provision-with-micromamba@v16
+    - uses: mamba-org/setup-micromamba@v1
       with:
-        environment-file: false
+        # all supported versions are fetched from https://github.com/mamba-org/micromamba-releases/releases now and contain the build number
+        micromamba-version: '1.2.0-1'
 
     - name: Python ${{ matrix.python-version }}
       shell: bash -l {0}
