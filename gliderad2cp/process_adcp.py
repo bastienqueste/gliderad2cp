@@ -1215,6 +1215,16 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
             vectorize=True,
             output_sizes={"gridded_bin": len(depth_offsets)},
         )
+        ADCP["Amp" + beam] = xr.apply_ufunc(
+            interp1d_np,
+            ADCP["Depth"] - ADCP["D" + beam],
+            ADCP["AmplitudeBeam" + beam],
+            input_core_dims=[["bin"], ["bin"]],
+            output_core_dims=[["gridded_bin"]],
+            exclude_dims={"bin"},
+            vectorize=True,
+            output_sizes={"gridded_bin": len(depth_offsets)},
+        )
 
     ADCP = ADCP.assign_coords({"depth_offset": (["gridded_bin"], depth_offsets)})
     ADCP = ADCP.assign_coords(
@@ -2410,86 +2420,34 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
 
 def grid_data(ADCP, glider, out, xaxis, yaxis):
     ADCP_pnum = np.tile(ADCP.profile_number, (len(ADCP.gridded_bin), 1)).T
-    out["Sh_E"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_E.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_N"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_N.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_U"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_U.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Heading"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Heading"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pitch"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pitch"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Roll"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Roll"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["latitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Latitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["longitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Longitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["profile_number"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["profile_number"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pressure"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pressure"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
+    keep_list = [
+        "Heading",
+        "Pitch",
+        "Roll",
+        "latitude",
+        "longitude",
+        "profile_number",
+        "Pressure",
+    ]
+    for varname in ADCP.variables:
+        if ADCP[varname].shape == ADCP.V1.shape:
+            out[varname] = grid2d(
+                ADCP_pnum.flatten(),
+                ADCP.bin_depth.values.flatten(),
+                ADCP[varname].values.flatten(),
+                xi=xaxis,
+                yi=yaxis,
+                fn="mean",
+            )[0]
+        elif varname in keep_list:
+            out[varname] = grid2d(
+                ADCP.profile_number.values,
+                ADCP.Pressure.values,
+                ADCP[varname].values,
+                xi=xaxis,
+                yi=yaxis,
+                fn="mean",
+            )[0]
 
     out = _grid_glider_data(glider, out, xaxis, yaxis)
 
