@@ -187,10 +187,6 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     glider = load(glider_file_path)
 
     ADCP = xr.open_mfdataset(adcp_file_path, group="Data/Average")
-    adcp_file_path = (
-        "/mnt/samba/temprary_data_store/ad2cp_chiara/sea056_M66.ad2cp.00000.nc"
-    )
-
     ADCP = ADCP[set(ADCP).intersection(adcp_vars)]
     ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
