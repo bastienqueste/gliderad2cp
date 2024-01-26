@@ -22,7 +22,6 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
-
 y_res = 1
 plot_num = 0
 _log = logging.getLogger(__name__)
@@ -40,6 +39,35 @@ default_options = {
     "ADCP_regrid_correlation_threshold": 20,
     "plots_directory": "plots",
 }
+
+adcp_vars = [
+    "VelocityBeam1",
+    "VelocityBeam2",
+    "VelocityBeam3",
+    "VelocityBeam4",
+    "CorrelationBeam1",
+    "CorrelationBeam2",
+    "CorrelationBeam3",
+    "CorrelationBeam4",
+    "AmplitudeBeam1",
+    "AmplitudeBeam2",
+    "AmplitudeBeam3",
+    "AmplitudeBeam4",
+    "FOMBeam1",
+    "FOMBeam2",
+    "FOMBeam3",
+    "FOMBeam4",
+    "SpeedOfSound",
+    "CellSize",
+    "Blanking",
+    "MagnetometerX",
+    "MagnetometerY",
+    "MagnetometerZ",
+    "Pressure",
+    "Heading",
+    "Pitch",
+    "Roll",
+]
 
 
 def save_plot(plot_dir, plot_name):
@@ -159,6 +187,11 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     glider = load(glider_file_path)
 
     ADCP = xr.open_mfdataset(adcp_file_path, group="Data/Average")
+    adcp_file_path = (
+        "/mnt/samba/temprary_data_store/ad2cp_chiara/sea056_M66.ad2cp.00000.nc"
+    )
+
+    ADCP = ADCP[set(ADCP).intersection(adcp_vars)]
     ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
     adcp_time_float = ADCP.time.values.astype("float")
@@ -1962,6 +1995,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     # If we subtract BT velocity from XYZ
     # then we get speed of water
     BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
+    BT = BT[set(BT).intersection(adcp_vars)]
     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
 
     thresh = 12
