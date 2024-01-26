@@ -37,7 +37,7 @@ Suggested reviewers: Laur Ferris, AnthonyBosse, Clark Richards
 
 # Summary
 
-Oceanographers routinely measure ocean currents to understand and map the transport of ocean properties. Measuring currents is most commonly done using instruments called acoustic doppler current profilers (ADCP). These instruments emit shorts pings of sound and listen for the echoing soundwaves which bounce off of water molecules and suspended particles. The delay between emission and reception tells us distance to the particles, and the pitch change of the echo tells us the relative velocity of the particles to the sensor. Using multiple beams of sounds, the ADCP can determine 3-dimensional currents at range. ADCP are however limited by power and size; there is a direct trade-off between size, power and transducer capability. There is a also a trade-off between ping frequency and effective range before the sound wave is attenuated. Large ocean going vessels can carry large, energy hungry, low-frequency ADCP with ranges of hundreds of meters down into the water column, while smaller platforms must compromise on range and signal to noise ratios.
+Oceanographers routinely measure ocean currents to understand and map the transport of ocean properties. Measuring currents is most commonly done using instruments called acoustic doppler current profilers (ADCP). These instruments emit shorts pings of sound and listen for the echoing soundwaves which bounce off of water molecules and suspended particles. The delay between emission and reception tells us distance to the particles, and the pitch change of the echo tells us the relative velocity of the particles to the sensor. Using beams of sounds in multiple directions, the ADCP can determine 3-dimensional currents at range. ADCP are however limited by power and size; there is a direct trade-off between size, power and transducer capability. There is a also a trade-off between ping frequency and effective range before the sound wave is attenuated. Large ocean going vessels can carry large, energy hungry, low-frequency ADCP with ranges of hundreds of meters down into the water column, while smaller platforms must compromise on range and signal to noise ratios.
 
 ![L-ADCP method.\label{fig:ladcp}](paper_figures/lADCP.png)
 
@@ -60,26 +60,16 @@ This toolbox collects successive measurements of ocean currents as the glider pr
 
 # Statement of need
 
-Software for processing ADCP data exists, with tools provided by instrument manufacturers, private companies and open-source communities. However, none of these tools apply the lowered ADCP method on Nortek Glider AD2CP sensors. Similar toolsets exist for ....
+Software for processing ADCP data exists, with tools provided by instrument manufacturers, private companies and open-source communities. However, none of are developed to be cross-glider compatible. Individual toolboxes for specific gliders or linked to published papers are available, the most nature of which is likely the Slocum-AD2CP reposity (https://github.com/JGradone/Slocum-AD2CP), offering similar functionality for the Slocum brand of gliders although missing specific corrections such as shear bias corrections as per Todd et al. 2017. (VERIFY CLAIM)
 
-Similar for Teledyne (https://github.com/JGradone/Glider_ADCP_Real_Time_Processing), (https://ieeexplore.ieee.org/document/7098134)
-
-A great portion of the processing can be automated in a straightforward way and requires minimal user input; namely the successive rounds of 3-dimensional coordinate transforms and regridding of velocity data along isobars which may deviate due to glider pitch. This toolbox greatly simplifies the file handling, integration of glider data to ADCP data, and complex trigonometry necessary to obtain high quality shear data.
-
-Furthermore, the integration of the Nortek AD2CP varies across glider manufacturers, either using alternating 3-beam configurations between up and down profiles (on the Seaglider or the Spray) or using 4 beams at all times (on the SeaExplorer). This python package allows users to easily load Nortek AD2CP netCDF files and pull the raw data to provide clean shear estimates with consistent processing and quality control independent of which glider they use.
-
-This toolbox integrates work performed at GU, VOTO, but also Tanaka and Todd while basing on best practices.
-
-@Callum : need to integrate new OceanGlider format as input to make it nicely platform independent. What's update on new format specification?
+The glider-ad2cp toolbox greatly simplifies file handling, integration of any glider data to ADCP data, and the complex trigonometry necessary to obtain high quality shear data. In particular, the integration of the Nortek AD2CP varies across glider manufacturers, either using alternating 3-beam configurations between up and down profiles (on the Seaglider or the Spray) or using 4 beams at all times (on the SeaExplorer). This python package allows users to easily load Nortek AD2CP netCDF files and pull the raw data to provide clean shear estimates with consistent processing and quality control independent of which glider they use. Finally, it provides a final referenced velocity profile and corrects for shear bias when the data permits.
 
 # Acknowledgements
 
-ONR-Global grant
-
-Formas grant
-
-Voice of the Ocean Foundation
-
-Intern students from the French Ecole Navale (for figures)
+BYQ and EF are supported by ONR GLOBAL Grant N62909-21-1-2008 and Formas Grant 2022-01536. BYQ is supported by the Voice of the Ocean Foundation and by the European Union's Horizon 2020 research and innovation programme under Grant 951842 (GROOM II). The authors want to thank the technicians and pilots of Voice of the Ocean foundation for assistance and support during deployments and piloting during 2021 and 2022. Figures are adapted from work performed by Johan Verquier and Émile Moncanis during their final study project of the École Navale hosted at the University of Gothenburg.
 
 # References
+
+Todd, R. E., Rudnick, D. L., Sherman, J. T., Owens, W. B., & George, L. (2017). Absolute velocity estimates from autonomous underwater gliders equipped with Doppler current profilers. Journal of Atmospheric and Oceanic Technology, 34(2), 309-333.
+
+Visbeck, M. (2002). Deep velocity profiling using lowered acoustic Doppler current profilers: Bottom track and inverse solutions. Journal of atmospheric and oceanic technology, 19(5), 794-807.
