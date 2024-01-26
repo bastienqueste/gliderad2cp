@@ -47,13 +47,21 @@ Ocean gliders are small, low power, autonomous underwater vehicles which profile
 
 
 This toolbox collects successive measurements of ocean currents as the glider profiles up and down and performs the following steps, providing figures for easy assessment of processing quality:
+
 1. Clean the ADCP data, remove bad measurements and perform a compass calibration.
+
 2. Correct the vertical alignment (in the earth frame of reference) of velocity measurements across all beams (Fig. \autoref{fig:regridding}).
+
 3. Convert the velocity data from ADCP-relative (*ie*. beam direction; Fig. \autoref{fig:beam2xyz}), to glider-relative (*ie*. X, Y, Z) and finally to earth-relative velocities (*ie*. East, North, Up).
+
 4. Calculate the vertical gradient in earth-relative velocities, also known as vertical shear.
+
 5. Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference.
+
 6. Determine the mean ocean current over the period of the glider dive by comparing ADCP-derived glider speed through water to its GPS-derived speed over land, the difference being caused by ocean currents.
+
 7. Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents [@visbeck:2002].
+
 8. Perform a shear-bias correction where possible [@todd:2017].
 
 
