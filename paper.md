@@ -53,14 +53,15 @@ This toolbox collects successive measurements of ocean currents as the glider pr
 4. Calculate the vertical gradient in earth-relative velocities, also known as vertical shear.
 5. Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference.
 6. Determine the mean ocean current over the period of the glider dive by comparing ADCP-derived glider speed through water to its GPS-derived speed over land, the difference being caused by ocean currents.
-7. Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents.
+7. Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents (Visbeck, 2002).
+8. Perform a shear-bias correction where possible (Todd et al., 2017).
 
 
 ![ADCP beams measure the along-beam velocity which needs to be converted to X,Y,Z velocities relative to teh glider's frame of reference. The coordinate transform matrix is specific to each instrument as it is defined by the angle of the different beams relative to the glider.\label{fig:beam2xyz}](paper_figures/beam2xyz.png)
 
 # Statement of need
 
-Software for processing ADCP data exists, with tools provided by instrument manufacturers, private companies and open-source communities. However, none of are developed to be cross-glider compatible. Individual toolboxes for specific gliders or linked to published papers are available, the most nature of which is likely the Slocum-AD2CP reposity (https://github.com/JGradone/Slocum-AD2CP), offering similar functionality for the Slocum brand of gliders although missing specific corrections such as shear bias corrections as per Todd et al. 2017. (VERIFY CLAIM)
+Software for processing ADCP data exists, with tools provided by instrument manufacturers, private companies and open-source communities. However, none of are developed to be cross-glider compatible. Individual toolboxes for specific gliders or linked to published papers are available, the most nature of which is likely the Slocum-AD2CP reposity (https://github.com/JGradone/Slocum-AD2CP), offering similar functionality for the Slocum brand of gliders although missing specific corrections such as shear bias corrections as per Todd et al. (2017).
 
 The glider-ad2cp toolbox greatly simplifies file handling, integration of any glider data to ADCP data, and the complex trigonometry necessary to obtain high quality shear data. In particular, the integration of the Nortek AD2CP varies across glider manufacturers, either using alternating 3-beam configurations between up and down profiles (on the Seaglider or the Spray) or using 4 beams at all times (on the SeaExplorer). This python package allows users to easily load Nortek AD2CP netCDF files and pull the raw data to provide clean shear estimates with consistent processing and quality control independent of which glider they use. Finally, it provides a final referenced velocity profile and corrects for shear bias when the data permits.
 
