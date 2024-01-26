@@ -73,6 +73,21 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+    if type(glider_file) is xr.core.dataset.Dataset:
+        _log.info(f"Input recognised as xarray dataset")
+        data = glider_file.to_dataframe()
+        data['time'] = data.index
+        data["date_float"] = data['time'].values.astype("float")
+        if 'profile_index' in data:
+            data['profile_number'] = data['profile_index']
+        p = data["pressure"]
+        SA = gsw.conversions.SA_from_SP(data.salinity, p, data.longitude, data.latitude)
+        CT = gsw.CT_from_t(SA, data["temperature"], p)
+        data["soundspeed"] = gsw.sound_speed(SA, CT, p)
+        data.index.name = None
+        return data
+        
+        
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
     else:
