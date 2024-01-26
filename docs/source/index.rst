@@ -9,15 +9,23 @@ gliderad2cp: Processing ad2cp data from gliders
 Package description
 =======================
 
-gliderad2cp estimates absolute ocean currents from glider ADCP data in 7 steps, each of which can be run independently and controlled via a dictionary of settings.
+gliderad2cp estimates absolute ocean currents from glider ADCP data in 8 steps, each of which can be run independently and controlled via a dictionary of settings.
 
 1. Clean the ADCP data, remove bad measurements and perform a compass calibration.
-2. Correct the vertical alignment (in the earth frame of reference) of velocity measurements across all beams (Fig. \autoref{fig:regridding}).
-3. Convert the velocity data from ADCP-relative (ie. beam direction; Fig. \autoref{fig:beam2xyz}), to glider-relative (ie. X, Y, Z) and finally to earth-relative velocities (ie. East, North, Up).
+
+2. Correct the vertical alignment (in the earth frame of reference) of velocity measurements across all beams.
+
+3. Convert the velocity data from ADCP-relative (*ie*. beam direction}), to glider-relative (*ie*. X, Y, Z) and finally to earth-relative velocities (*ie*. East, North, Up).
+
 4. Calculate the vertical gradient in earth-relative velocities, also known as vertical shear.
+
 5. Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference.
+
 6. Determine the mean ocean current over the period of the glider dive by comparing ADCP-derived glider speed through water to its GPS-derived speed over land, the difference being caused by ocean currents.
+
 7. Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents.
+
+8. Perform a shear-bias correction where possible.
 
 
 1. Cleaning and quality control
@@ -41,12 +49,10 @@ These settings can be changed using the `options` dictionary.
 Additionally the first X bins can be discarded at this stage if the operator has observed side-lobe interference.
 
 
-2. Regridding to avoid shear smearing
--------------------------------------
+2. Correct vertical alignment of velocity measurements across all beams
+------------------------------------------------------------------------
 
 ``process_adcp.remapADCPdepth(ADCP, options)``
-
-Shear smearing
 
 .. image::  ../../paper_figures/regridding.png
 
@@ -54,6 +60,9 @@ The Nortek AD2CP measurements are time-gated at the same intervals for each indi
 
 3. Coordinate transformations
 ----------------------------------
+
+.. image::  ../../paper_figures/beam2xyz.png
+
 
 ``process_adcp.calcXYZfrom3beam(ADCP, options)``
 
@@ -65,8 +74,8 @@ standard Nortek matrices. This returns velocities in XYZ coordinates, that is, r
 To convert these XYZ coordinates to earth relative velocities (east, north up or ENU) we use the glider compass.
 Standard matrices for the Nortek AD2CP.
 
-4. Calculate vertical velocity shear
--------------------------------------
+4. Calculate vertical velocity shear of earth relative velocities
+-------------------------------------------------------------------
 
 ``process_adcp.grid_shear_data(ADCP, data, options)``
 
@@ -93,32 +102,17 @@ and the actual surfacing location of the glider is caused by ocean currents, so 
 
 The dive average current calculated in step 6. is used to reference the relative velocity profiles calculated in step 5. thus calculating earth relative absolute current velocities.
 
+8. Perform shear bias correction where possible
+------------------------------------------------
 
 Integration with glider data
 --------------------------------
 
-- What is necessary format of glider data, why do we require these variables
+To create estimates of vertical velocity shear, glider data require the following variables:  ["time", "temperature", "salinity", "latitude", "pressure", "longitude", "profile_number", "declination", ]
 
-- Lat and lon data needed where/when and need for accurate GPS data?
+To determine mean ocean current, the following additional variables are required: ["speed_vert", "speed_horz", "dead_reckoning", "nav_resource", "dive_number"]
 
-Usage
-=======
-
-Assessing shear data quality
------------------------------
-
-- Example code
-
-- Figure list and description
-
-Obtaining referenced velocities
---------------------------------
-
-LADCP method
-
-.. image::  ../../paper_figures/lADCP.png
-
-
+These reference horizontal and vertical velocities can be obtained from several methods including:
 
 - Built in DVL approach to calculate DAC and reference
 
@@ -131,6 +125,10 @@ LADCP method
 - Visbeck LSQ approach to multiple constraints
 
 
+
+
+
+
 Example processing notebook
 =============================
 
@@ -140,11 +138,6 @@ Example processing notebook
 
    example_processing
 
-Known issues
----------------
-- Shear bias
-
-- Compass calibrations
 
 Indices and tables
 ==================
