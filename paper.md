@@ -70,7 +70,3 @@ The glider-ad2cp toolbox greatly simplifies file handling, integration of any gl
 BYQ and EF are supported by ONR GLOBAL Grant N62909-21-1-2008 and Formas Grant 2022-01536. BYQ is supported by the Voice of the Ocean Foundation and by the European Union's Horizon 2020 research and innovation programme under Grant 951842 (GROOM II). The authors want to thank the technicians and pilots of Voice of the Ocean foundation for assistance and support during deployments and piloting during 2021 and 2022. Figures are adapted from work performed by Johan Verquier and Émile Moncanis during their final study project of the École Navale hosted at the University of Gothenburg.
 
 # References
-
-Todd, R. E., Rudnick, D. L., Sherman, J. T., Owens, W. B., & George, L. (2017). Absolute velocity estimates from autonomous underwater gliders equipped with Doppler current profilers. Journal of Atmospheric and Oceanic Technology, 34(2), 309-333.
-
-Visbeck, M. (2002). Deep velocity profiling using lowered acoustic Doppler current profilers: Bottom track and inverse solutions. Journal of atmospheric and oceanic technology, 19(5), 794-807.
