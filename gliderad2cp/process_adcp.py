@@ -2701,9 +2701,11 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.subplot(131)
         plt.plot(np.nanvar(ADCP_E_old, axis=1), yaxis, "-r")
         plt.plot(np.nanvar(out["ADCP_E"], axis=1), yaxis, "-g")
+        plt.gca().invert_yaxis()
         plt.subplot(132)
         plt.plot(np.nanvar(ADCP_N_old, axis=1), yaxis, "-r")
         plt.plot(np.nanvar(out["ADCP_N"], axis=1), yaxis, "-g")
+        plt.gca().invert_yaxis()
         plt.subplot(133)
         plt.plot(
             np.nanvar(np.sqrt(ADCP_E_old**2 + ADCP_N_old**2), axis=1), yaxis, "-r"
@@ -2713,6 +2715,7 @@ def calc_bias(out, yaxis, taxis, days, options):
             yaxis,
             "-g",
         )
+        plt.gca().invert_yaxis()
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "calc_bias")
     if options["debug_plots"]:
@@ -2739,7 +2742,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.title("Eastward velocity (m.s-1)")
 
         plt.subplot(6, 1, 2)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_N"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]
