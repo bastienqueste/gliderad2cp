@@ -150,6 +150,7 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
 
 def RunningMean(x, N):
+    # is np.convolve better/faster?
     grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.NaN
     for istep in range(np.shape(grid)[1]):
         grid[istep : len(x) + istep, istep] = x
@@ -338,7 +339,7 @@ def remapADCPdepth(ADCP, options):
 
         plt.subplot(131)
         plt.plot(ADCP.time[x], ADCP.Pitch[x])
-        plt.ylabel("Pitch")
+        plt.ylabel("ADCP Pitch")
 
         plt.subplot(132)
         plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k")
@@ -348,6 +349,7 @@ def remapADCPdepth(ADCP, options):
             15,
             c="C0",
             alpha=0.1,
+            label='ADCP depth'
         )
         plt.scatter(
             times.flatten(),
@@ -377,7 +379,7 @@ def remapADCPdepth(ADCP, options):
         plt.gca().invert_yaxis()
 
         plt.subplot(133)
-        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k")
+        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k", label='ADCP depth')
         plt.scatter(
             times.flatten(),
             ADCP.isel(time=x)["D2"].values.flatten(),
@@ -416,12 +418,12 @@ def remapADCPdepth(ADCP, options):
             save_plot(options["plots_directory"], "cell_depth")
 
     plog(
-        "Depth calculation of cells correct. Beam 1 2 4 match on down; 3 2 4 match on up. (Tested on downward facing)"
+        "Please verify the location of ADCP velocity bins relative to pitch and depth of the sensor to make sure ADCP direction has been properly identified."
     )
     return ADCP
 
 
-def _heading_correction(ADCP, glider, options):
+def _heading_correction(ADCP, glider, options): # TODO: replace with external function
     # # Get local geomagnetic target strength:
     def getGeoMagStrength():
         lat = np.nanmedian(glider.latitude)
@@ -656,8 +658,9 @@ def remove_outliers(ADCP, options):
         plt.legend(("B1", "B2", "B3", "B4"))
         plt.axhline(0, color="k")
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
-        plt.ylabel("velocity shear")
+        plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
+        plt.title('Mean velocity shear along beam for each beam before QC')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear")
 
@@ -666,12 +669,19 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 1 Velocity')
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 2 Velocity')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 3 Velocity')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 4 Velocity')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities")
 
@@ -725,8 +735,9 @@ def remove_outliers(ADCP, options):
         plt.legend(("B1", "B2", "B3", "B4"))
         plt.axhline(0, color="k")
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
-        plt.ylabel("velocity shear")
+        plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
+        plt.title('Mean velocity shear along beam for each beam after QC')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear_post_qc")
         plt.figure(figsize=(20, 20))
@@ -734,12 +745,20 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 1 Velocity (post-QC)')
+        plt.xlabel("Along beam distance (m)")
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 2 Velocity (post-QC)')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 3 Velocity (post-QC)')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 4 Velocity (post-QC)')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities_post_qc")
     return ADCP
