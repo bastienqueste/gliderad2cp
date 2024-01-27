@@ -23,7 +23,7 @@ warnings.filterwarnings(
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
 
-y_res = 1
+y_res = 1 # TODO: move to options
 plot_num = 0
 _log = logging.getLogger(__name__)
 default_options = {
@@ -73,6 +73,7 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+    # Read in pyglider nercdf. Note does not check for exact pyglider format, simply assumes
     if type(glider_file) is xr.core.dataset.Dataset:
         _log.info(f"Input recognised as xarray dataset")
         data = glider_file.to_dataframe()
@@ -85,9 +86,8 @@ def load(glider_file):
         CT = gsw.CT_from_t(SA, data["temperature"], p)
         data["soundspeed"] = gsw.sound_speed(SA, CT, p)
         data.index.name = None
-        return data
-        
-        
+        return data       
+    # Read in csv file or pandas file
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
     else:
@@ -136,8 +136,8 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
     grid = np.full([np.size(yi), np.size(xi)], np.nan)
 
-    raw["xbins"], xbin_iter = pd.cut(raw.x, xi, retbins=True, labels=False)
-    raw["ybins"], ybin_iter = pd.cut(raw.y, yi, retbins=True, labels=False)
+    raw["xbins"], xbin_iter = pd.cut(raw.x, xi, retbins=True, labels=False, right=False)
+    raw["ybins"], ybin_iter = pd.cut(raw.y, yi, retbins=True, labels=False, right=False)
 
     _tmp = raw.groupby(["xbins", "ybins"])["v"].agg(fn)
     grid[
