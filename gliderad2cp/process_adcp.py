@@ -252,7 +252,7 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     plog("Added glider variables")
 
     # Detect if ADCP is top mounted using the magnetometer
-    if ADCP.ADCP.AccelerometerZ.values.mean() < 0:
+    if ADCP.AccelerometerZ.values.mean() < 0:
         options["top_mounted"] = False
     else:
         options["top_mounted"] = True
