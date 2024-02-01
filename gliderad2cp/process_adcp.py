@@ -989,7 +989,7 @@ def _shear_correction(ADCP, var, correct=True):
     return None
 
 
-def correct_shear(ADCP, options):
+def correct_shear(ADCP, options):  # TODO remove??
     ADCP = do_beam2xyzz(ADCP)
     if options["debug_plots"]:
         plotit(ADCP, options, "xyz_shear")
@@ -2763,7 +2763,7 @@ def shear_from_adcp(adcp_file_path, glider_file_path, options=None):
     ADCP = correct_heading(ADCP, data, options)
     ADCP = soundspeed_correction(ADCP)
     ADCP = remove_outliers(ADCP, options)
-    ADCP = correct_shear(ADCP, options)
+    ADCP = correct_shear(ADCP, options)      # TODO: remove?
     ADCP = correct_backscatter(ADCP, data, options)
     ADCP = regridADCPdata(ADCP, options)
     ADCP = calcXYZfrom3beam(ADCP, options)
