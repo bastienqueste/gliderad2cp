@@ -72,6 +72,13 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+    """
+    Load glider data for processing by gliderad2cp.
+
+    :param glider_file: str or Path. Relative or absolute path to a csv or pqt file of glider data
+    :returns: a pandas dataframe of glider data
+    """
+
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
     else:
@@ -251,6 +258,12 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
 
 
 def remapADCPdepth(ADCP, options):
+    """
+    Remaps velocity estimates to depth bins using the attitude of the glider
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with velocities remapped to depth bins in the variables "Dx"where x is the beam number
+    """
     ## All *_Range coordinates are distance along beam. Verified with data.
     if options["top_mounted"]:
         direction = 1
@@ -623,6 +636,15 @@ def soundspeed_correction(ADCP):
 
 
 def remove_outliers(ADCP, options):
+    """
+    Function discards velocity estimates outside of user specified bounds in `options`.
+    "ADCP_correlationThreshold": minimum % correlation within each ensemble
+    "ADCP_amplitudeThreshold": minimum return amplitude
+    "ADCP_velocityThreshold": maximum relative velocity
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with outliers removed
+    """
     if options["debug_plots"]:
         plt.figure(figsize=(20, 5))
         ADCP["VelocityBeam1"].differentiate(coord="Velocity Range").mean(
@@ -1259,6 +1281,13 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
 
 
 def calcXYZfrom3beam(ADCP, options):
+    """
+    Coordinate transform that converts velocity estimates along beams (V1-4) to glider relative velcoities X, Y , Z
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with X, Y, Z velocities
+    """
+
     def sin(x):
         return np.sin(np.deg2rad(x))
 
@@ -1468,6 +1497,14 @@ def calcXYZfrom3beam(ADCP, options):
 
 
 def calcENUfromXYZ(ADCP, glider, options):
+    """
+    Coordinate transform that converts velocity estimates relative to the glider (X, Y Z) into the earth relative
+    reference frame east north up (ENU)
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with E, N, U velocities
+    """
+
     def M_xyz2enu(heading, pitch, roll):
         hh = np.pi * (heading - 90) / 180
         pp = np.pi * pitch / 180
@@ -2063,6 +2100,13 @@ def bottom_track(ADCP, adcp_file_path, options):
 
 
 def grid_shear_data(ADCP, glider, options):
+    """
+    Grid ENU velocitues into standardised vertical bins.
+    :param ADCP: xr.DataSet of ADCP data
+    :param glider: pd.DataFrame of glider data
+    :param options: options dictionary
+    :return: ADCP with vertically gridded ENU velocities
+    """
     x = np.arange(0, np.shape(ADCP.Sh_E.values)[0], 1)
 
     SHEm, XI, YI = grid2d(
