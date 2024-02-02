@@ -6,7 +6,6 @@ nbsphinx
 netcdf4
 numpy
 pandas
-pandoc
 pooch
 pre-commit
 pyarrow
