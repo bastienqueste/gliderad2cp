@@ -1,6 +1,8 @@
 dask
 gsw
+ipython
 matplotlib
+nbsphinx
 netcdf4
 numpy
 pandas
@@ -9,4 +11,5 @@ pre-commit
 pyarrow
 pytest
 scipy
+sphinx
 xarray
