@@ -23,7 +23,7 @@ warnings.filterwarnings(
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
 
-y_res = 1
+y_res = 1 # TODO: move to options
 plot_num = 0
 _log = logging.getLogger(__name__)
 default_options = {
@@ -73,6 +73,21 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+    # Read in pyglider nercdf. Note does not check for exact pyglider format, simply assumes
+    if type(glider_file) is xr.core.dataset.Dataset:
+        _log.info(f"Input recognised as xarray dataset")
+        data = glider_file.to_dataframe()
+        data['time'] = data.index
+        data["date_float"] = data['time'].values.astype("float")
+        if 'profile_index' in data:
+            data['profile_number'] = data['profile_index']
+        p = data["pressure"]
+        SA = gsw.conversions.SA_from_SP(data.salinity, p, data.longitude, data.latitude)
+        CT = gsw.CT_from_t(SA, data["temperature"], p)
+        data["soundspeed"] = gsw.sound_speed(SA, CT, p)
+        data.index.name = None
+        return data       
+    # Read in csv file or pandas file
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
     else:
@@ -121,8 +136,8 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
     grid = np.full([np.size(yi), np.size(xi)], np.nan)
 
-    raw["xbins"], xbin_iter = pd.cut(raw.x, xi, retbins=True, labels=False)
-    raw["ybins"], ybin_iter = pd.cut(raw.y, yi, retbins=True, labels=False)
+    raw["xbins"], xbin_iter = pd.cut(raw.x, xi, retbins=True, labels=False, right=False)
+    raw["ybins"], ybin_iter = pd.cut(raw.y, yi, retbins=True, labels=False, right=False)
 
     _tmp = raw.groupby(["xbins", "ybins"])["v"].agg(fn)
     grid[
@@ -135,6 +150,7 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
 
 def RunningMean(x, N):
+    # is np.convolve better/faster?
     grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.NaN
     for istep in range(np.shape(grid)[1]):
         grid[istep : len(x) + istep, istep] = x
@@ -237,10 +253,10 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     plog("Added glider variables")
 
     # Detect if ADCP is top mounted using the magnetometer
-    if ADCP.MagnetometerZ.values.mean() < 0:
-        options["top_mounted"] = True
-    else:
+    if ADCP.AccelerometerZ.values.mean() < 0:
         options["top_mounted"] = False
+    else:
+        options["top_mounted"] = True
     plog(f'top mounted: {options["top_mounted"]}')
     if "plots_directory" in options.keys():
         if not Path(options["plots_directory"]).is_dir():
@@ -323,7 +339,7 @@ def remapADCPdepth(ADCP, options):
 
         plt.subplot(131)
         plt.plot(ADCP.time[x], ADCP.Pitch[x])
-        plt.ylabel("Pitch")
+        plt.ylabel("ADCP Pitch")
 
         plt.subplot(132)
         plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k")
@@ -333,6 +349,7 @@ def remapADCPdepth(ADCP, options):
             15,
             c="C0",
             alpha=0.1,
+            label='ADCP depth'
         )
         plt.scatter(
             times.flatten(),
@@ -362,7 +379,7 @@ def remapADCPdepth(ADCP, options):
         plt.gca().invert_yaxis()
 
         plt.subplot(133)
-        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k")
+        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k", label='ADCP depth')
         plt.scatter(
             times.flatten(),
             ADCP.isel(time=x)["D2"].values.flatten(),
@@ -401,12 +418,12 @@ def remapADCPdepth(ADCP, options):
             save_plot(options["plots_directory"], "cell_depth")
 
     plog(
-        "Depth calculation of cells correct. Beam 1 2 4 match on down; 3 2 4 match on up. (Tested on downward facing)"
+        "Please verify the location of ADCP velocity bins relative to pitch and depth of the sensor to make sure ADCP direction has been properly identified."
     )
     return ADCP
 
 
-def _heading_correction(ADCP, glider, options):
+def _heading_correction(ADCP, glider, options): # TODO: replace with external function
     # # Get local geomagnetic target strength:
     def getGeoMagStrength():
         lat = np.nanmedian(glider.latitude)
@@ -641,8 +658,9 @@ def remove_outliers(ADCP, options):
         plt.legend(("B1", "B2", "B3", "B4"))
         plt.axhline(0, color="k")
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
-        plt.ylabel("velocity shear")
+        plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
+        plt.title('Mean velocity shear along beam for each beam before QC')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear")
 
@@ -651,12 +669,19 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 1 Velocity')
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 2 Velocity')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 3 Velocity')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 4 Velocity')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities")
 
@@ -710,8 +735,9 @@ def remove_outliers(ADCP, options):
         plt.legend(("B1", "B2", "B3", "B4"))
         plt.axhline(0, color="k")
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
-        plt.ylabel("velocity shear")
+        plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
+        plt.title('Mean velocity shear along beam for each beam after QC')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear_post_qc")
         plt.figure(figsize=(20, 20))
@@ -719,12 +745,20 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 1 Velocity (post-QC)')
+        plt.xlabel("Along beam distance (m)")
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 2 Velocity (post-QC)')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 3 Velocity (post-QC)')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
+        plt.xlabel("Along beam distance (m)")
+        plt.title('Beam 4 Velocity (post-QC)')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities_post_qc")
     return ADCP
@@ -2667,9 +2701,11 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.subplot(131)
         plt.plot(np.nanvar(ADCP_E_old, axis=1), yaxis, "-r")
         plt.plot(np.nanvar(out["ADCP_E"], axis=1), yaxis, "-g")
+        plt.gca().invert_yaxis()
         plt.subplot(132)
         plt.plot(np.nanvar(ADCP_N_old, axis=1), yaxis, "-r")
         plt.plot(np.nanvar(out["ADCP_N"], axis=1), yaxis, "-g")
+        plt.gca().invert_yaxis()
         plt.subplot(133)
         plt.plot(
             np.nanvar(np.sqrt(ADCP_E_old**2 + ADCP_N_old**2), axis=1), yaxis, "-r"
@@ -2679,6 +2715,7 @@ def calc_bias(out, yaxis, taxis, days, options):
             yaxis,
             "-g",
         )
+        plt.gca().invert_yaxis()
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "calc_bias")
     if options["debug_plots"]:
@@ -2705,7 +2742,7 @@ def calc_bias(out, yaxis, taxis, days, options):
         plt.title("Eastward velocity (m.s-1)")
 
         plt.subplot(6, 1, 2)
-        plt.pcolormesh(taxis, yaxis, out["ADCP_E"], cmap="RdBu", shading="auto")
+        plt.pcolormesh(taxis, yaxis, out["ADCP_N"], cmap="RdBu", shading="auto")
         plt.clim(np.array([-1, 1]) * 0.5)
         plt.colorbar()
         [plt.axvline(x, color="k", alpha=0.3) for x in days]
