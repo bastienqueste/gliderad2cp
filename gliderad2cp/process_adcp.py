@@ -23,7 +23,7 @@ warnings.filterwarnings(
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
 
-y_res = 1 # TODO: move to options
+y_res = 1  # TODO: move to options
 plot_num = 0
 _log = logging.getLogger(__name__)
 default_options = {
@@ -73,20 +73,26 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+    """
+    Load glider data for processing by gliderad2cp.
+
+    :param glider_file: str or Path. Relative or absolute path to a csv or pqt file of glider data. Or an xarray dataset
+    :returns: a pandas dataframe of glider data
+    """
     # Read in pyglider nercdf. Note does not check for exact pyglider format, simply assumes
     if type(glider_file) is xr.core.dataset.Dataset:
-        _log.info(f"Input recognised as xarray dataset")
+        _log.info("Input recognised as xarray dataset")
         data = glider_file.to_dataframe()
-        data['time'] = data.index
-        data["date_float"] = data['time'].values.astype("float")
-        if 'profile_index' in data:
-            data['profile_number'] = data['profile_index']
+        data["time"] = data.index
+        data["date_float"] = data["time"].values.astype("float")
+        if "profile_index" in data:
+            data["profile_number"] = data["profile_index"]
         p = data["pressure"]
         SA = gsw.conversions.SA_from_SP(data.salinity, p, data.longitude, data.latitude)
         CT = gsw.CT_from_t(SA, data["temperature"], p)
         data["soundspeed"] = gsw.sound_speed(SA, CT, p)
         data.index.name = None
-        return data       
+        return data
     # Read in csv file or pandas file
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
@@ -268,6 +274,12 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
 
 
 def remapADCPdepth(ADCP, options):
+    """
+    Remaps velocity estimates to depth bins using the attitude of the glider
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with velocities remapped to depth bins in the variables "Dx"where x is the beam number
+    """
     ## All *_Range coordinates are distance along beam. Verified with data.
     if options["top_mounted"]:
         direction = 1
@@ -349,7 +361,7 @@ def remapADCPdepth(ADCP, options):
             15,
             c="C0",
             alpha=0.1,
-            label='ADCP depth'
+            label="ADCP depth",
         )
         plt.scatter(
             times.flatten(),
@@ -379,7 +391,7 @@ def remapADCPdepth(ADCP, options):
         plt.gca().invert_yaxis()
 
         plt.subplot(133)
-        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k", label='ADCP depth')
+        plt.scatter(ADCP.time[x], ADCP.Pressure[x], 5, "k", label="ADCP depth")
         plt.scatter(
             times.flatten(),
             ADCP.isel(time=x)["D2"].values.flatten(),
@@ -423,7 +435,7 @@ def remapADCPdepth(ADCP, options):
     return ADCP
 
 
-def _heading_correction(ADCP, glider, options): # TODO: replace with external function
+def _heading_correction(ADCP, glider, options):  # TODO: replace with external function
     # # Get local geomagnetic target strength:
     def getGeoMagStrength():
         lat = np.nanmedian(glider.latitude)
@@ -641,6 +653,15 @@ def soundspeed_correction(ADCP):
 
 
 def remove_outliers(ADCP, options):
+    """
+    Function discards velocity estimates outside of user specified bounds in `options`.
+    "ADCP_correlationThreshold": minimum % correlation within each ensemble
+    "ADCP_amplitudeThreshold": minimum return amplitude
+    "ADCP_velocityThreshold": maximum relative velocity
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with outliers removed
+    """
     if options["debug_plots"]:
         plt.figure(figsize=(20, 5))
         ADCP["VelocityBeam1"].differentiate(coord="Velocity Range").mean(
@@ -660,7 +681,7 @@ def remove_outliers(ADCP, options):
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
         plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
-        plt.title('Mean velocity shear along beam for each beam before QC')
+        plt.title("Mean velocity shear along beam for each beam before QC")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear")
 
@@ -669,19 +690,19 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 1 Velocity')
+        plt.title("Beam 1 Velocity")
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 2 Velocity')
+        plt.title("Beam 2 Velocity")
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 3 Velocity')
+        plt.title("Beam 3 Velocity")
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 4 Velocity')
+        plt.title("Beam 4 Velocity")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities")
 
@@ -737,7 +758,7 @@ def remove_outliers(ADCP, options):
         plt.ylim(np.array([-1, 1]) * 1.5e-3)
         plt.ylabel("Velocity Shear (s-1)")
         plt.xlabel("Along beam distance (m)")
-        plt.title('Mean velocity shear along beam for each beam after QC')
+        plt.title("Mean velocity shear along beam for each beam after QC")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "along_beam_shear_post_qc")
         plt.figure(figsize=(20, 20))
@@ -745,20 +766,20 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 1 Velocity (post-QC)')
+        plt.title("Beam 1 Velocity (post-QC)")
         plt.xlabel("Along beam distance (m)")
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 2 Velocity (post-QC)')
+        plt.title("Beam 2 Velocity (post-QC)")
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 3 Velocity (post-QC)')
+        plt.title("Beam 3 Velocity (post-QC)")
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
         plt.xlabel("Along beam distance (m)")
-        plt.title('Beam 4 Velocity (post-QC)')
+        plt.title("Beam 4 Velocity (post-QC)")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities_post_qc")
     return ADCP
@@ -1294,6 +1315,13 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
 
 
 def calcXYZfrom3beam(ADCP, options):
+    """
+    Coordinate transform that converts velocity estimates along beams (V1-4) to glider relative velcoities X, Y , Z
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with X, Y, Z velocities
+    """
+
     def sin(x):
         return np.sin(np.deg2rad(x))
 
@@ -1503,6 +1531,14 @@ def calcXYZfrom3beam(ADCP, options):
 
 
 def calcENUfromXYZ(ADCP, glider, options):
+    """
+    Coordinate transform that converts velocity estimates relative to the glider (X, Y Z) into the earth relative
+    reference frame east north up (ENU)
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :return: ADCP with E, N, U velocities
+    """
+
     def M_xyz2enu(heading, pitch, roll):
         hh = np.pi * (heading - 90) / 180
         pp = np.pi * pitch / 180
@@ -2098,6 +2134,13 @@ def bottom_track(ADCP, adcp_file_path, options):
 
 
 def grid_shear_data(ADCP, glider, options):
+    """
+    Grid ENU velocitues into standardised vertical bins.
+    :param ADCP: xr.DataSet of ADCP data
+    :param glider: pd.DataFrame of glider data
+    :param options: options dictionary
+    :return: ADCP with vertically gridded ENU velocities
+    """
     x = np.arange(0, np.shape(ADCP.Sh_E.values)[0], 1)
 
     SHEm, XI, YI = grid2d(
