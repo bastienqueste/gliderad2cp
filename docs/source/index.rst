@@ -135,12 +135,6 @@ These reference horizontal and vertical velocities can be obtained from several 
 
 - Visbeck LSQ approach to multiple constraints
 
-API Documentation
-==========================
-
-.. automodule:: gliderad2cp.process_adcp
-   :members:
-
 
 
 
@@ -155,6 +149,12 @@ Example processing notebook
 
    example_processing
 
+
+API Documentation
+==========================
+
+.. automodule:: gliderad2cp.process_adcp
+   :members:
 
 Indices and tables
 ==================
