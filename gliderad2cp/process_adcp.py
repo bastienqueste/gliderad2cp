@@ -2241,13 +2241,13 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
 
     :param ADCP: xr.DataSet of ADCP data
     :param options: options dictionary
-    :param dE:
-    :param dN:
-    :param dT:
-    :param xaxis:
-    :param yaxis:
-    :param taxis:
-    :param options:
+    :param dE: eastward surface drift velocity
+    :param dN: northward surface drift velocity
+    :param dT: timestamps surface drift velocity
+    :param xaxis: profile numbers of gridded velocity data
+    :param yaxis: depth bins of gridded velocity data
+    :param taxis: time of gridded velocity data
+    :param options: options dict for processing
     :return:  xr.DataSet of referenced gridded N and E velocities
     """
     out = {}
@@ -2735,10 +2735,10 @@ def calc_bias(out, yaxis, taxis, days, options):
     Corrects gridded horizontal velocities for vertical shear bias.
 
     :param out: xr.DataSet of gridded horizontal velocities
-    :param yaxis:
-    :param taxis:
-    :param days:
-    :param options:
+    :param yaxis: depth bins of gridded velocity data
+    :param taxis: time of gridded velocity data
+    :param days: days to plot
+    :param options: options dict for processing
     :return: xr.DataSet of gridded horizontal velocities corrected for shear bias
     """
 
