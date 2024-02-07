@@ -2,9 +2,9 @@ gliderad2cp: Processing ad2cp data from gliders
 =================================================
 
 
-``gliderad2cp`` gliderad2cp processes data from the Nortek AD2CP acoustic doppler current profiler (ADCP) mounted on a glider. gliderad2cp takes data from the ADCP unit and the glider and combines them to produce estimates of vertical shear of velocity. It also prodives functionality to integrate these velocity shear profiles into absolute earth relative water vlocities.
+``gliderad2cp`` gliderad2cp processes data from the Nortek AD2CP acoustic doppler current profiler (ADCP) mounted on a glider. gliderad2cp takes data from the ADCP unit and the glider and combines them to produce estimates of vertical shear of velocity. It also provides functionality to integrate these velocity shear profiles into absolute earth relative water velocities.
 
-
+Code hosted at https://github.com/bastienqueste/gliderad2cp
 
 Package description
 =======================
@@ -44,7 +44,7 @@ Using default settings, velocity estimates are discarded if they meet any of the
 
 - Correlation < 70 %
 
-These settings can be changed using the `options` dictionary.
+These settings can be changed using the ``options`` dictionary.
 
 Additionally the first X bins can be discarded at this stage if the operator has observed side-lobe interference.
 
@@ -56,7 +56,12 @@ Additionally the first X bins can be discarded at this stage if the operator has
 
 .. image::  ../../paper_figures/regridding.png
 
-The Nortek AD2CP measurements are time-gated at the same intervals for each individual beam, meaning that the relation between echo delay and measurement range is the same for all 4 beams and does not account for the more open front and back beam angles. The purpose is to have 3 beams at equal angles from vertical when the glider is diving at the correct angle (17.4$$^\circ$$ from horizontal for the Nortek AD2CP; in grey on the left). If the glider is flying at a different angle, there will be a mismatch in depth between the 3 beams (in gray on the right) which requires regridding and use of different bins (in green on the right) to minimise shear smearing.
+The Nortek AD2CP measurements are time-gated at the same intervals for each individual beam, meaning that the relation
+between echo delay and measurement range is the same for all 4 beams and does not account for the more open front and
+back beam angles. The purpose is to have 3 beams at equal angles from vertical when the glider is diving at the
+correct angle (17.4 ° from horizontal for the Nortek AD2CP; in grey on the left). If the glider is flying at
+a different angle, there will be a mismatch in depth between the 3 beams (in grey on the right) which requires regridding
+and use of different bins (in green on the right) to minimise shear smearing.
 
 3. Coordinate transformations
 ----------------------------------
@@ -90,7 +95,8 @@ Profiles of velocity shear are integrated vertically to render vertical profiles
 
 6. Determine mean ocean current
 -------------------------------------
-`process_adcp.get_DAC(ADCP, data, options)`
+
+``process_adcp.get_DAC(ADCP, data, options)``
 
 One source of absolute velocity estimate is the glider dive average current (DAC). Estimation of DAC depends on a flight model for the glider.
 Using this flight model, one can calculate the expected surfacing location of a glider from a known start position. The difference between this position
@@ -98,12 +104,17 @@ and the actual surfacing location of the glider is caused by ocean currents, so 
 
 7. Reference velocity profiles to mean current
 -----------------------------------------------
+
 ``process_adcp.reference_shear(ADCP, data, dE,dN,dT, xaxis, yaxis, taxis, options)``
 
 The dive average current calculated in step 6. is used to reference the relative velocity profiles calculated in step 5. thus calculating earth relative absolute current velocities.
 
 8. Perform shear bias correction where possible
 ------------------------------------------------
+
+``process_adcp.calc_bias(out, yaxis, taxis, days, options)``
+
+This optional function corrects for alonb beam shear bias.
 
 Integration with glider data
 --------------------------------
@@ -124,12 +135,6 @@ These reference horizontal and vertical velocities can be obtained from several 
 
 - Visbeck LSQ approach to multiple constraints
 
-API Documentation
-==========================
-
-.. automodule:: gliderad2cp.process_adcp
-   :members:
-
 
 
 
@@ -144,6 +149,12 @@ Example processing notebook
 
    example_processing
 
+
+API Documentation
+==========================
+
+.. automodule:: gliderad2cp.process_adcp
+   :members:
 
 Indices and tables
 ==================

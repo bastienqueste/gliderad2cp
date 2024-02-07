@@ -50,8 +50,13 @@ def save_plot(plot_dir, plot_name):
 
 
 def get_declination(data, key):
-    """Function retrieves declination data from NOAA for the average lon, lat and datetime of glider data.
+    """
+    Function retrieves declination data from NOAA for the average lon, lat and datetime of glider data.
     Requires an API key. Register at https://www.ngdc.noaa.gov/geomag/CalcSurvey.shtml
+
+    :param data: pd.DataFrame of glider data including time, longitude and latitude
+    :param key: API key for the NOAA geomag service
+    :return: dataframe with added declination column
     """
     if "declination" in list(data):
         _log.info("declination data already present")
@@ -276,6 +281,7 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
 def remapADCPdepth(ADCP, options):
     """
     Remaps velocity estimates to depth bins using the attitude of the glider
+
     :param ADCP: xr.DataSet of ADCP data
     :param options: options dictionary
     :return: ADCP with velocities remapped to depth bins in the variables "Dx"where x is the beam number
@@ -658,6 +664,7 @@ def remove_outliers(ADCP, options):
     "ADCP_correlationThreshold": minimum % correlation within each ensemble
     "ADCP_amplitudeThreshold": minimum return amplitude
     "ADCP_velocityThreshold": maximum relative velocity
+
     :param ADCP: xr.DataSet of ADCP data
     :param options: options dictionary
     :return: ADCP with outliers removed
@@ -1316,7 +1323,8 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
 
 def calcXYZfrom3beam(ADCP, options):
     """
-    Coordinate transform that converts velocity estimates along beams (V1-4) to glider relative velcoities X, Y , Z
+    Coordinate transform that converts velocity estimates along beams (V1-4) to glider relative velocities X, Y , Z
+
     :param ADCP: xr.DataSet of ADCP data
     :param options: options dictionary
     :return: ADCP with X, Y, Z velocities
@@ -1534,6 +1542,7 @@ def calcENUfromXYZ(ADCP, glider, options):
     """
     Coordinate transform that converts velocity estimates relative to the glider (X, Y Z) into the earth relative
     reference frame east north up (ENU)
+
     :param ADCP: xr.DataSet of ADCP data
     :param options: options dictionary
     :return: ADCP with E, N, U velocities
@@ -1829,6 +1838,16 @@ def verify_calcENUfromXYZ(ADCP, options):
 
 
 def get_DAC(ADCP, glider, options):
+    """
+    Estimate dive averaged horizontal currents for the glider. This function requires estimates of the glider's
+    horizontal and vertical speed through water
+
+    :param ADCP: xr.DataSet of ADCP data
+    :param glider: pd.DataFrame of glider data
+    :param options: options dictionary
+    :return: glider DataFrame with estimates of dive average current
+    """
+
     ## Calculate full x-y dead reckoning during each dive
     def reset_transport_at_GPS(arr):
         def ffill(arr):
@@ -2135,7 +2154,8 @@ def bottom_track(ADCP, adcp_file_path, options):
 
 def grid_shear_data(ADCP, glider, options):
     """
-    Grid ENU velocitues into standardised vertical bins.
+    Grid ENU velocities into standardised vertical bins.
+
     :param ADCP: xr.DataSet of ADCP data
     :param glider: pd.DataFrame of glider data
     :param options: options dictionary
@@ -2216,6 +2236,20 @@ def grid_shear_data(ADCP, glider, options):
 
 
 def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
+    """
+    Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
+
+    :param ADCP: xr.DataSet of ADCP data
+    :param options: options dictionary
+    :param dE: eastward surface drift velocity
+    :param dN: northward surface drift velocity
+    :param dT: timestamps surface drift velocity
+    :param xaxis: profile numbers of gridded velocity data
+    :param yaxis: depth bins of gridded velocity data
+    :param taxis: time of gridded velocity data
+    :param options: options dict for processing
+    :return:  xr.DataSet of referenced gridded N and E velocities
+    """
     out = {}
 
     var = ["E", "N"]
@@ -2697,6 +2731,17 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
 
 
 def calc_bias(out, yaxis, taxis, days, options):
+    """
+    Corrects gridded horizontal velocities for vertical shear bias.
+
+    :param out: xr.DataSet of gridded horizontal velocities
+    :param yaxis: depth bins of gridded velocity data
+    :param taxis: time of gridded velocity data
+    :param days: days to plot
+    :param options: options dict for processing
+    :return: xr.DataSet of gridded horizontal velocities corrected for shear bias
+    """
+
     def get_bias(glider_speed, coeff):
         r, c = np.shape(glider_speed)
         bias = np.nancumsum(glider_speed, axis=0)
