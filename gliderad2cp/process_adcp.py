@@ -22,7 +22,6 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
-
 y_res = 1  # TODO: move to options
 plot_num = 0
 _log = logging.getLogger(__name__)
@@ -40,6 +39,36 @@ default_options = {
     "ADCP_regrid_correlation_threshold": 20,
     "plots_directory": "plots",
 }
+
+adcp_vars = [
+    "VelocityBeam1",
+    "VelocityBeam2",
+    "VelocityBeam3",
+    "VelocityBeam4",
+    "CorrelationBeam1",
+    "CorrelationBeam2",
+    "CorrelationBeam3",
+    "CorrelationBeam4",
+    "AmplitudeBeam1",
+    "AmplitudeBeam2",
+    "AmplitudeBeam3",
+    "AmplitudeBeam4",
+    "FOMBeam1",
+    "FOMBeam2",
+    "FOMBeam3",
+    "FOMBeam4",
+    "SpeedOfSound",
+    "CellSize",
+    "Blanking",
+    "MagnetometerX",
+    "MagnetometerY",
+    "MagnetometerZ",
+    "AccelerometerZ",
+    "Pressure",
+    "Heading",
+    "Pitch",
+    "Roll",
+]
 
 
 def save_plot(plot_dir, plot_name):
@@ -186,6 +215,7 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     glider = load(glider_file_path)
 
     ADCP = xr.open_mfdataset(adcp_file_path, group="Data/Average")
+    ADCP = ADCP[set(ADCP).intersection(adcp_vars)]
     ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
     adcp_time_float = ADCP.time.values.astype("float")
@@ -1277,6 +1307,16 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
             vectorize=True,
             output_sizes={"gridded_bin": len(depth_offsets)},
         )
+        ADCP["Amp" + beam] = xr.apply_ufunc(
+            interp1d_np,
+            ADCP["Depth"] - ADCP["D" + beam],
+            ADCP["AmplitudeBeam" + beam],
+            input_core_dims=[["bin"], ["bin"]],
+            output_core_dims=[["gridded_bin"]],
+            exclude_dims={"bin"},
+            vectorize=True,
+            output_sizes={"gridded_bin": len(depth_offsets)},
+        )
 
     ADCP = ADCP.assign_coords({"depth_offset": (["gridded_bin"], depth_offsets)})
     ADCP = ADCP.assign_coords(
@@ -1999,20 +2039,24 @@ def getSurfaceDrift(glider, options):
         dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
         dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
 
-    times = glider.time.values.astype("float")[_gps] / 10**9
+    times = glider.date_float.values[_gps] / 10**9
     dtimes = np.gradient(times)
 
-    dE = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dN = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dT = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
+    good_dives = np.unique(dnum)
+
+    dE = np.full(len(good_dives), np.NaN)
+    dN = np.full(len(good_dives), np.NaN)
+    dT = np.full(len(good_dives), np.NaN)
 
     for idx in range(len(dE)):
-        _gd = (dtimes < 21) & (dnum == idx + 1)
+        _gd = (dtimes < 21) & (dnum == good_dives[idx])
         dE[idx] = np.nanmedian(dlons[_gd] / dtimes[_gd])
         dN[idx] = np.nanmedian(dlats[_gd] / dtimes[_gd])
         dT[idx] = np.nanmean(times[_gd])
 
     dT = dT * 10**9
+
+    df_drift = pd.DataFrame({"dive_number": good_dives, "dE": dE, "dN": dN, "dT": dT})
     if options["debug_plots"]:
         plt.figure(figsize=(15, 7))
         plt.subplot(211)
@@ -2023,7 +2067,7 @@ def getSurfaceDrift(glider, options):
         plt.title("V")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "surface_drift")
-    return dE, dN, dT
+    return df_drift
 
 
 def bottom_track(ADCP, adcp_file_path, options):
@@ -2041,6 +2085,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     # If we subtract BT velocity from XYZ
     # then we get speed of water
     BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
+    BT = BT[set(BT).intersection(adcp_vars)]
     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
 
     thresh = 12
@@ -2231,11 +2276,15 @@ def grid_shear_data(ADCP, glider, options):
     taxis = pd.to_datetime(
         glider.date_float.groupby(glider.profile_number).agg("mean").values
     )
-    days = np.unique(glider.time.round("D"))
-    return xaxis, yaxis, taxis, days
+    out = grid_data(ADCP, glider, {}, xaxis, yaxis)
+    ds = make_dataset(out)
+    ds["xaxis"] = ("profile_num", xaxis)
+    ds["taxis"] = ("profile_num", taxis)
+    ds["yaxis"] = ("depth_bin", yaxis)
+    return ds
 
 
-def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
+def reference_shear(ADCP, glider, df_drift, ds, options):
     """
     Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
 
@@ -2251,6 +2300,12 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
     :return:  xr.DataSet of referenced gridded N and E velocities
     """
     out = {}
+    dE = df_drift.dE
+    dN = df_drift.dN
+    dT = df_drift.dT
+    xaxis = ds.xaxis.values
+    yaxis = ds.yaxis.values
+    taxis = ds.taxis.values
 
     var = ["E", "N"]
     if options["debug_plots"]:
@@ -2281,7 +2336,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         V = V - np.tile(
             np.nanmean(V, axis=0), (np.shape(V)[0], 1)
         )  # Make mean of baroclinic profiles equal to 0
-
         # Grid DAC
         DAC, XI, YI = grid2d(
             glider.profile_number.values,
@@ -2311,7 +2365,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
             yi=yaxis,
             fn="median",
         )
-
         # Seconds spent in each depth bin, to weight referencing
         SpB = y_res / dPdz
         SpB[np.isinf(SpB)] = 0
@@ -2324,7 +2377,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         Ref = np.nanmean(DAC, axis=0) - np.nansum(V * SpB, axis=0) / np.nansum(
             SpB, axis=0
         )
-
         # Now we reference the velocity
         V = V + np.tile(Ref, (np.shape(V)[0], 1))
         out["ADCP_" + letter] = V
@@ -2364,7 +2416,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
             )
             plt.legend(("Surf. drift " + letter, "Near surf. ADCP " + letter))
             plt.ylim([-0.5, 0.5])
-
             if "BT_E" in list(ADCP):
                 ## PLOT 5
                 plt.subplot(6, 2, pstep + 11)
@@ -2521,86 +2572,34 @@ def _grid_glider_data(glider, out, xaxis, yaxis):
 
 def grid_data(ADCP, glider, out, xaxis, yaxis):
     ADCP_pnum = np.tile(ADCP.profile_number, (len(ADCP.gridded_bin), 1)).T
-    out["Sh_E"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_E.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_N"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_N.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_U"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_U.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Heading"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Heading"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pitch"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pitch"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Roll"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Roll"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["latitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Latitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["longitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Longitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["profile_number"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["profile_number"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pressure"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pressure"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
+    keep_list = [
+        "Heading",
+        "Pitch",
+        "Roll",
+        "latitude",
+        "longitude",
+        "profile_number",
+        "Pressure",
+    ]
+    for varname in ADCP.variables:
+        if ADCP[varname].shape == ADCP.V1.shape:
+            out[varname] = grid2d(
+                ADCP_pnum.flatten(),
+                ADCP.bin_depth.values.flatten(),
+                ADCP[varname].values.flatten(),
+                xi=xaxis,
+                yi=yaxis,
+                fn="mean",
+            )[0]
+        elif varname in keep_list:
+            out[varname] = grid2d(
+                ADCP.profile_number.values,
+                ADCP.Pressure.values,
+                ADCP[varname].values,
+                xi=xaxis,
+                yi=yaxis,
+                fn="mean",
+            )[0]
 
     out = _grid_glider_data(glider, out, xaxis, yaxis)
 
