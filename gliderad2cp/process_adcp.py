@@ -63,6 +63,7 @@ adcp_vars = [
     "MagnetometerX",
     "MagnetometerY",
     "MagnetometerZ",
+    "AccelerometerZ",
     "Pressure",
     "Heading",
     "Pitch",
@@ -2038,20 +2039,24 @@ def getSurfaceDrift(glider, options):
         dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
         dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
 
-    times = glider.time.values.astype("float")[_gps] / 10**9
+    times = glider.date_float.values[_gps] / 10**9
     dtimes = np.gradient(times)
 
-    dE = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dN = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dT = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
+    good_dives = np.unique(dnum)
+
+    dE = np.full(len(good_dives), np.NaN)
+    dN = np.full(len(good_dives), np.NaN)
+    dT = np.full(len(good_dives), np.NaN)
 
     for idx in range(len(dE)):
-        _gd = (dtimes < 21) & (dnum == idx + 1)
+        _gd = (dtimes < 21) & (dnum == good_dives[idx])
         dE[idx] = np.nanmedian(dlons[_gd] / dtimes[_gd])
         dN[idx] = np.nanmedian(dlats[_gd] / dtimes[_gd])
         dT[idx] = np.nanmean(times[_gd])
 
     dT = dT * 10**9
+
+    df_drift = pd.DataFrame({"dive_number": good_dives, "dE": dE, "dN": dN, "dT": dT})
     if options["debug_plots"]:
         plt.figure(figsize=(15, 7))
         plt.subplot(211)
@@ -2062,7 +2067,7 @@ def getSurfaceDrift(glider, options):
         plt.title("V")
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "surface_drift")
-    return dE, dN, dT
+    return df_drift
 
 
 def bottom_track(ADCP, adcp_file_path, options):
@@ -2271,11 +2276,15 @@ def grid_shear_data(ADCP, glider, options):
     taxis = pd.to_datetime(
         glider.date_float.groupby(glider.profile_number).agg("mean").values
     )
-    days = np.unique(glider.time.round("D"))
-    return xaxis, yaxis, taxis, days
+    out = grid_data(ADCP, glider, {}, xaxis, yaxis)
+    ds = make_dataset(out)
+    ds["xaxis"] = ("profile_num", xaxis)
+    ds["taxis"] = ("profile_num", taxis)
+    ds["yaxis"] = ("depth_bin", yaxis)
+    return ds
 
 
-def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
+def reference_shear(ADCP, glider, df_drift, ds, options):
     """
     Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
 
@@ -2291,6 +2300,12 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
     :return:  xr.DataSet of referenced gridded N and E velocities
     """
     out = {}
+    dE = df_drift.dE
+    dN = df_drift.dN
+    dT = df_drift.dT
+    xaxis = ds.xaxis.values
+    yaxis = ds.yaxis.values
+    taxis = ds.taxis.values
 
     var = ["E", "N"]
     if options["debug_plots"]:
@@ -2321,7 +2336,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         V = V - np.tile(
             np.nanmean(V, axis=0), (np.shape(V)[0], 1)
         )  # Make mean of baroclinic profiles equal to 0
-
         # Grid DAC
         DAC, XI, YI = grid2d(
             glider.profile_number.values,
@@ -2351,7 +2365,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
             yi=yaxis,
             fn="median",
         )
-
         # Seconds spent in each depth bin, to weight referencing
         SpB = y_res / dPdz
         SpB[np.isinf(SpB)] = 0
@@ -2364,7 +2377,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         Ref = np.nanmean(DAC, axis=0) - np.nansum(V * SpB, axis=0) / np.nansum(
             SpB, axis=0
         )
-
         # Now we reference the velocity
         V = V + np.tile(Ref, (np.shape(V)[0], 1))
         out["ADCP_" + letter] = V
@@ -2404,7 +2416,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
             )
             plt.legend(("Surf. drift " + letter, "Near surf. ADCP " + letter))
             plt.ylim([-0.5, 0.5])
-
             if "BT_E" in list(ADCP):
                 ## PLOT 5
                 plt.subplot(6, 2, pstep + 11)

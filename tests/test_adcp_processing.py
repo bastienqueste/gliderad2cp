@@ -48,10 +48,7 @@ def test_processing():
     ADCP = process_adcp.calcENUfromXYZ(ADCP, data, options)
 
     # get your gridded shear here
-    xaxis, yaxis, taxis, days = process_adcp.grid_shear_data(ADCP, data, options)
-    out = process_adcp.grid_data(ADCP, data, {}, xaxis, yaxis)
-
-    ds = process_adcp.make_dataset(out)
+    ds = process_adcp.grid_shear_data(ADCP, data, options)
     ds_min = ds[["Sh_E", "Sh_N", "Sh_U"]]
     data_source.fetch(f"processed_velocity_{profile_range}.nc")
     ds_min_test = xr.open_dataset(
@@ -71,11 +68,13 @@ def test_processing():
     data["nav_resource"] = extra_data["nav_resource"]
     data["dive_number"] = extra_data["dive_number"]
     data = process_adcp.get_DAC(ADCP, data, options)
-    dE, dN, dT = process_adcp.getSurfaceDrift(data, options)
+    df_drift = process_adcp.getSurfaceDrift(data, options)
     ADCP = process_adcp.bottom_track(ADCP, adcp_path, options)
-    out = process_adcp.reference_shear(
-        ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options
-    )
+    xaxis = ds.xaxis.values
+    yaxis = ds.yaxis.values
+    taxis = ds.taxis.values
+    days = np.unique(data.time.round("D"))
+    out = process_adcp.reference_shear(ADCP, data, df_drift, ds, options)
     out = process_adcp.grid_data(ADCP, data, out, xaxis, yaxis)
     out = process_adcp.calc_bias(out, yaxis, taxis, days, options)
 
