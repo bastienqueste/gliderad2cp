@@ -37,6 +37,8 @@ jobs:
 
     - name: Tests
       shell: bash -l {0}
+      env:
+        GEOMAG_API_KEY: ${{ secrets.GEOMAG_API_KEY }}
       run: >
         micromamba activate TEST
-        && python -m pytest -rxs tests/
+        && python -m pytest -rxs tests
