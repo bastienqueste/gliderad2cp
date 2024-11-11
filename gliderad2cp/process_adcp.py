@@ -162,7 +162,7 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
 def RunningMean(x, N):
     # is np.convolve better/faster?
-    grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.NaN
+    grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.nan
     for istep in range(np.shape(grid)[1]):
         grid[istep : len(x) + istep, istep] = x
     return np.nanmean(grid, axis=1)[N:-N]
@@ -170,7 +170,7 @@ def RunningMean(x, N):
 
 def interp(x, y, xi):
     _gg = np.isfinite(x + y)
-    return interp1d(x[_gg], y[_gg], bounds_error=False, fill_value=np.NaN)(xi)
+    return interp1d(x[_gg], y[_gg], bounds_error=False, fill_value=np.nan)(xi)
 
 
 def rmsd(x):
@@ -727,20 +727,20 @@ def remove_outliers(ADCP, options):
         C = ADCP["CorrelationBeam" + beam].values.copy()
         n = len(C.flatten())
         ind = C < options["ADCP_correlationThreshold"]
-        C[ind] = np.NaN
+        C[ind] = np.nan
         C[np.isfinite(C)] = 1
         plog("Beam " + beam + " correlation: " + prct(ind) + "% removed")
 
         A = ADCP["AmplitudeBeam" + beam].values.copy()
         ind = A > options["ADCP_amplitudeThreshold"]
-        A[ind] = np.NaN
-        # A[A < 40] = np.NaN
+        A[ind] = np.nan
+        # A[A < 40] = np.nan
         A[np.isfinite(A)] = 1
         plog("Beam " + beam + " amplitude: " + prct(ind) + "% removed")
 
         V = ADCP["VelocityBeam" + beam].values.copy()
         ind = np.abs(V) > options["ADCP_velocityThreshold"]
-        V[ind] = np.NaN
+        V[ind] = np.nan
         V[np.isfinite(V)] = 1
         plog("Beam " + beam + " velocity: " + prct(ind) + "% removed")
 
@@ -1259,11 +1259,11 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
         def interp1d_np(x, y):
             _gd = np.isfinite(y)
             if np.count_nonzero(_gd) > 1:
-                xi = interp1d(x[_gd], y[_gd], bounds_error=False, fill_value=np.NaN)(
+                xi = interp1d(x[_gd], y[_gd], bounds_error=False, fill_value=np.nan)(
                     depth_offsets
                 )
             else:
-                xi = depth_offsets * np.NaN
+                xi = depth_offsets * np.nan
             return xi
 
         ADCP.load()
@@ -1655,7 +1655,7 @@ def calcENUfromXYZ(ADCP, glider, options):
 
     isnan = np.isnan(SHEm)
     SHEm = np.nancumsum(SHEm[::-1, :], 0)[::-1, :]
-    SHEm[isnan] = np.NaN
+    SHEm[isnan] = np.nan
     if options["debug_plots"]:
         plt.figure(figsize=(25, 12))
         plt.pcolormesh(XI, YI, SHEm)
@@ -1677,7 +1677,7 @@ def plot_subsurface_movement(ADCP, glider, options):
         np.abs(ADCP["profile_number"] - profile_center) < profile_range * 0.1
     )
     ##### PLOT 2
-    deltat = np.append(np.diff(ADCP["time"].values.astype("float") / 1e9), np.NaN)
+    deltat = np.append(np.diff(ADCP["time"].values.astype("float") / 1e9), np.nan)
 
     ## 3 beam E and N velocity (Opposite because glider travel is opposite to what it "sees")
     E = -(ADCP["E"].mean(dim="gridded_bin") * deltat).isel(time=_gd)
@@ -1853,7 +1853,7 @@ def get_DAC(ADCP, glider, options):
         def ffill(arr):
             return pd.DataFrame(arr).ffill().values.flatten()
 
-        ref = np.zeros(np.shape(arr)) * np.NaN
+        ref = np.zeros(np.shape(arr)) * np.nan
         ref[_gps] = arr[_gps]
         return arr - ffill(ref)
 
@@ -1879,8 +1879,8 @@ def get_DAC(ADCP, glider, options):
 
     ## Calculate on per dive basis
     dnum = np.unique(glider.dive_number.values)
-    sidx = np.zeros(np.shape(dnum)) * np.NaN
-    didx = np.zeros(np.shape(dnum)) * np.NaN
+    sidx = np.zeros(np.shape(dnum)) * np.nan
+    didx = np.zeros(np.shape(dnum)) * np.nan
 
     for idx, dx in enumerate(dnum):
         try:
@@ -1905,12 +1905,12 @@ def get_DAC(ADCP, glider, options):
     dive_lon = glider.longitude.values[didx]
     dive_time = t[didx]
 
-    dr_e = np.zeros(np.shape(dnum)) * np.NaN
-    dr_n = np.zeros(np.shape(dnum)) * np.NaN
-    gps_e = np.zeros(np.shape(dnum)) * np.NaN
-    gps_n = np.zeros(np.shape(dnum)) * np.NaN
-    dt = np.zeros(np.shape(dnum)) * np.NaN
-    meant = np.zeros(np.shape(dnum)) * np.NaN
+    dr_e = np.zeros(np.shape(dnum)) * np.nan
+    dr_n = np.zeros(np.shape(dnum)) * np.nan
+    gps_e = np.zeros(np.shape(dnum)) * np.nan
+    gps_n = np.zeros(np.shape(dnum)) * np.nan
+    dt = np.zeros(np.shape(dnum)) * np.nan
+    meant = np.zeros(np.shape(dnum)) * np.nan
 
     def lon2m(x, y):
         return gsw.distance([x, x + 1], [y, y])
@@ -2002,9 +2002,9 @@ def getSurfaceDrift(glider, options):
     times = glider.time.values.astype("float")[_gps] / 10**9
     dtimes = np.gradient(times)
 
-    dE = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dN = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
-    dT = np.full(int(np.nanmax(glider.dive_number)), np.NaN)
+    dE = np.full(int(np.nanmax(glider.dive_number)), np.nan)
+    dN = np.full(int(np.nanmax(glider.dive_number)), np.nan)
+    dT = np.full(int(np.nanmax(glider.dive_number)), np.nan)
 
     for idx in range(len(dE)):
         _gd = (dtimes < 21) & (dnum == idx + 1)
@@ -2121,9 +2121,9 @@ def bottom_track(ADCP, adcp_file_path, options):
     P = BT["Pitch"].values
     R = BT["Roll"].values
 
-    BT_E = np.full_like(H, np.NaN)
-    BT_N = np.full_like(H, np.NaN)
-    BT_U = np.full_like(H, np.NaN)
+    BT_E = np.full_like(H, np.nan)
+    BT_N = np.full_like(H, np.nan)
+    BT_U = np.full_like(H, np.nan)
 
     if options["top_mounted"]:
         direction = 1
@@ -2138,11 +2138,11 @@ def bottom_track(ADCP, adcp_file_path, options):
             BT_Z4[i] * direction,
         ]
 
-    bt_e = np.full_like(full_time, np.NaN)
+    bt_e = np.full_like(full_time, np.nan)
     bt_e[matching] = BT_E
-    bt_n = np.full_like(full_time, np.NaN)
+    bt_n = np.full_like(full_time, np.nan)
     bt_n[matching] = BT_N
-    bt_u = np.full_like(full_time, np.NaN)
+    bt_u = np.full_like(full_time, np.nan)
     bt_u[matching] = BT_U
 
     ADCP["BT_E"] = ("time", bt_e)
@@ -2277,7 +2277,7 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
         V = (
             np.cumsum(Sh, axis=0) * y_res
         )  # Cumulative sum of shear to recover velocity profile
-        V[_bd] = np.NaN  # Return NaNs to their rightful place.
+        V[_bd] = np.nan  # Return NaNs to their rightful place.
         V = V - np.tile(
             np.nanmean(V, axis=0), (np.shape(V)[0], 1)
         )  # Make mean of baroclinic profiles equal to 0
@@ -2375,7 +2375,7 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
                     ),
                     axis=0,
                 )
-                indices[indices > 10] = np.NaN
+                indices[indices > 10] = np.nan
                 indices[np.isfinite(indices)] = 1
                 bottom_V = np.nanmean(V * indices, axis=0)
                 plt.plot(taxis, RunningMean(bottom_V, 1), "-r", alpha=0.8)
@@ -2642,8 +2642,8 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
             Nse = Ns / np.sqrt(Nn)
             Sse = Ss / np.sqrt(Sn)
 
-            N[N == 0] = np.NaN
-            S[S == 0] = np.NaN
+            N[N == 0] = np.nan
+            S[S == 0] = np.nan
             if options["debug_plots"]:
                 plt.fill_between(
                     bins[1:], SF * N - float(d), -float(d), color="r", alpha=0.5
@@ -2695,8 +2695,8 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
         Nse = Ns / np.sqrt(Nn)
         Sse = Ss / np.sqrt(Sn)
 
-        N[N == 0] = np.NaN
-        S[S == 0] = np.NaN
+        N[N == 0] = np.nan
+        S[S == 0] = np.nan
         if options["debug_plots"]:
             plt.fill_between(
                 bins[1:], SF * N - float(d), -float(d), color="r", alpha=0.5
@@ -2745,7 +2745,7 @@ def calc_bias(out, yaxis, taxis, days, options):
     def get_bias(glider_speed, coeff):
         r, c = np.shape(glider_speed)
         bias = np.nancumsum(glider_speed, axis=0)
-        bias[~np.isfinite(glider_speed)] = np.NaN
+        bias[~np.isfinite(glider_speed)] = np.nan
         bias = bias - np.tile(np.nanmean(bias, axis=0), [r, 1])
         return bias * coeff
 
