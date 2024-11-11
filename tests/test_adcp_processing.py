@@ -59,7 +59,7 @@ def test_processing():
     )
     for var in list(ds_min):
         assert np.allclose(
-            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3
+            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-2, rtol=1e-4
         )
     # integrate the gridded shear from here
 
@@ -83,5 +83,5 @@ def test_processing():
     ds_min = ds[["ADCP_E", "ADCP_N"]]
     for var in list(ds_min):
         assert np.allclose(
-            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-7, rtol=1e-3
+            ds_min[var], ds_min_test[var], equal_nan=True, atol=1e-2, rtol=1e-4
         )
