@@ -1,7 +1,4 @@
-import numpy as np
 import pandas as pd
-import xarray as xr
-
 import gliderad2cp.process_adcp
 from gliderad2cp import process_adcp
 from gliderad2cp.download_example_data import data_source
@@ -22,7 +19,6 @@ def test_processing():
     data_source.fetch(f"adcp_profiles_{profile_range}.nc")
     adcp_path = str(data_source.path / f"adcp_profiles_{profile_range}.nc")
     options = {
-        "debug_plots": False,
         "correctADCPHeading": True,
         "ADCP_discardFirstBins": 0,
         "ADCP_correlationThreshold": 70,
@@ -42,21 +38,16 @@ def test_processing():
     ADCP = process_adcp.soundspeed_correction(ADCP)
     ADCP = process_adcp.remove_outliers(ADCP, options)
     ADCP = process_adcp.correct_shear(ADCP, options)
-    ADCP = process_adcp.correct_backscatter(ADCP, data, options)
+    ADCP = process_adcp.correct_backscatter(ADCP, data)
     ADCP = process_adcp.regridADCPdata(ADCP, options)
     ADCP = process_adcp.calcXYZfrom3beam(ADCP, options)
-    ADCP = process_adcp.calcENUfromXYZ(ADCP, data, options)
+    ADCP = process_adcp.calcENUfromXYZ(ADCP, options)
 
     # get your gridded shear here
-    xaxis, yaxis, taxis, days = process_adcp.grid_shear_data(ADCP, data, options)
+    xaxis, yaxis, taxis, days = process_adcp.grid_shear_data(data)
     out = process_adcp.grid_data(ADCP, data, {}, xaxis, yaxis)
 
     ds = process_adcp.make_dataset(out)
-    ds_min = ds[["Sh_E", "Sh_N", "Sh_U"]]
-    data_source.fetch(f"processed_velocity_{profile_range}.nc")
-    ds_min_test = xr.open_dataset(
-        str(data_source.path / f"processed_velocity_{profile_range}.nc")
-    )
 
     # integrate the gridded shear from here
 
@@ -67,14 +58,11 @@ def test_processing():
     data["dead_reckoning"] = extra_data["dead_reckoning"]
     data["nav_resource"] = extra_data["nav_resource"]
     data["dive_number"] = extra_data["dive_number"]
-    data = process_adcp.get_DAC(ADCP, data, options)
-    dE, dN, dT = process_adcp.getSurfaceDrift(data, options)
+    data = process_adcp.get_DAC(ADCP, data)
+    dE, dN, dT = process_adcp.getSurfaceDrift(data)
     ADCP = process_adcp.bottom_track(ADCP, adcp_path, options)
-    out = process_adcp.reference_shear(
-        ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options
-    )
+    out = process_adcp.reference_shear(ADCP, data, xaxis, yaxis)
     out = process_adcp.grid_data(ADCP, data, out, xaxis, yaxis)
-    out = process_adcp.calc_bias(out, yaxis, taxis, days, options)
-
+    out = process_adcp.calc_bias(out, yaxis)
     ds = process_adcp.make_dataset(out)
 
