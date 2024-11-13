@@ -300,7 +300,10 @@ def remapADCPdepth(ADCP, options):
     # Upward facing ADCP, so beam 1 ~= 30 deg on the way up, beam 3 on the way down, when flying at 17.4 degree pitch.
     # Returns angles of each beam from the UP direction
 
-    z_bin_distance = ADCP["Velocity Range"].values
+    # z_bin_distance = ADCP["Velocity Range"].values
+    
+    ## THIS IS THE  BEAM REMAPPING CHANGE HERE :: the addition of the cos factor
+    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1)) ## WRONGG
 
     ADCP["D1"] = (
         ["time", "bin"],
@@ -927,7 +930,8 @@ def _shear_correction(ADCP, var, correct=True):
         _gd = ADCP["Depth"] > 5
 
         ### MAKE FIGURE
-        colormap = "viridis"
+        from matplotlib import colormaps
+        colormap = colormaps['viridis']
         alpha = 30 / len(full_range)
         if alpha > 1.0:
             alpha = 0.5
@@ -2765,27 +2769,27 @@ def calc_bias(out, yaxis, taxis, days, options):
 
 def make_dataset(out):
     profiles = np.arange(out["Pressure"].shape[1])
-    depth_bins = np.arange(out["Pressure"].shape[0])
+    pressure_bins = np.arange(out["Pressure"].shape[0])
 
     ds_dict = {}
     for key, val in out.items():
-        if key in ["depth_bin", "profile_num"]:
+        if key in ["pressure_bin", "profile_num"]:
             continue
         ds_dict[key] = (
             (
-                "depth_bin",
+                "pressure_bin",
                 "profile_num",
             ),
             val,
         )
     coords_dict = {
         "profile_num": ("profile_num", profiles),
-        "depth_bin": ("depth_bin", depth_bins),
+        "pressure_bin": ("pressure_bin", pressure_bins),
     }
     ds = xr.Dataset(data_vars=ds_dict, coords=coords_dict)
     ds["profile_datetime"] = (
         "profile_num",
-        pd.to_datetime(ds.date_float.mean(dim="depth_bin").values),
+        pd.to_datetime(ds.date_float.mean(dim="pressure_bin").values),
     )
     return ds
 
