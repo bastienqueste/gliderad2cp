@@ -1,7 +1,4 @@
-import numpy as np
 import pandas as pd
-import xarray as xr
-
 import gliderad2cp.process_adcp
 from gliderad2cp import process_adcp
 from gliderad2cp.download_example_data import data_source
@@ -22,7 +19,6 @@ def test_processing():
     data_source.fetch(f"adcp_profiles_{profile_range}.nc")
     adcp_path = str(data_source.path / f"adcp_profiles_{profile_range}.nc")
     options = {
-        "debug_plots": False,
         "correctADCPHeading": True,
         "ADCP_discardFirstBins": 0,
         "ADCP_correlationThreshold": 70,
@@ -52,11 +48,6 @@ def test_processing():
     out = process_adcp.grid_data(ADCP, data, {}, xaxis, yaxis)
 
     ds = process_adcp.make_dataset(out)
-    ds_min = ds[["Sh_E", "Sh_N", "Sh_U"]]
-    data_source.fetch(f"processed_velocity_{profile_range}.nc")
-    ds_min_test = xr.open_dataset(
-        str(data_source.path / f"processed_velocity_{profile_range}.nc")
-    )
 
     # integrate the gridded shear from here
 
