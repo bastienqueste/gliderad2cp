@@ -707,7 +707,7 @@ def correct_shear(ADCP, options):
     return ADCP
 
 
-def correct_backscatter(ADCP, glider, options):
+def correct_backscatter(ADCP, glider):
     # https://www.sciencedirect.com/science/article/pii/S0278434304002171#fig2
     # 2.1. Intensity correction
 
@@ -959,7 +959,7 @@ def calcXYZfrom3beam(ADCP, options):
     return ADCP
 
 
-def calcENUfromXYZ(ADCP, glider, options):
+def calcENUfromXYZ(ADCP, options):
     """
     Coordinate transform that converts velocity estimates relative to the glider (X, Y Z) into the earth relative
     reference frame east north up (ENU)
@@ -1057,7 +1057,7 @@ def calcENUfromXYZ(ADCP, glider, options):
     return ADCP
 
 
-def get_DAC(ADCP, glider, options):
+def get_DAC(ADCP, glider):
     """
     Estimate dive averaged horizontal currents for the glider. This function requires estimates of the glider's
     horizontal and vertical speed through water
@@ -1162,7 +1162,7 @@ def get_DAC(ADCP, glider, options):
     return glider
 
 
-def getSurfaceDrift(glider, options):
+def getSurfaceDrift(glider):
     _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
 
     def lon2m(x, y):
@@ -1327,7 +1327,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     return ADCP
 
 
-def grid_shear_data(ADCP, glider, options):
+def grid_shear_data(glider):
     """
     Grid ENU velocities into standardised vertical bins.
 
@@ -1345,7 +1345,7 @@ def grid_shear_data(ADCP, glider, options):
     return xaxis, yaxis, taxis, days
 
 
-def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
+def reference_shear(ADCP, glider, xaxis, yaxis):
     """
     Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
 
@@ -1578,7 +1578,7 @@ def grid_data(ADCP, glider, out, xaxis, yaxis):
     return out
 
 
-def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
+def verify_depth_bias(out, yaxis, E="ADCP_E", N="ADCP_N"):
     north = np.gradient(out["latitude"], axis=1) > 0
     south = np.gradient(out["latitude"], axis=1) < 0
     depths = np.linspace(0, np.max(yaxis) - 5, 20)
@@ -1597,11 +1597,6 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
             N, _ = np.histogram(Nvals, bins=bins, density=True)
             S, _ = np.histogram(Svals, bins=bins, density=True)
 
-            Ns = np.nanstd(Nvals)
-            Ss = np.nanstd(Svals)
-            Nn = np.count_nonzero(np.isfinite(Nvals))
-            Sn = np.count_nonzero(np.isfinite(Svals))
-
             N[N == 0] = np.nan
             S[S == 0] = np.nan
     for d in depths:
@@ -1612,16 +1607,11 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
         N, _ = np.histogram(Nvals, bins=bins, density=True)
         S, _ = np.histogram(Svals, bins=bins, density=True)
 
-        Ns = np.nanstd(Nvals)
-        Ss = np.nanstd(Svals)
-        Nn = np.count_nonzero(np.isfinite(Nvals))
-        Sn = np.count_nonzero(np.isfinite(Svals))
-
         N[N == 0] = np.nan
         S[S == 0] = np.nan
 
 
-def calc_bias(out, yaxis, taxis, days, options):
+def calc_bias(out, yaxis):
     """
     Corrects gridded horizontal velocities for vertical shear bias.
 
@@ -1713,10 +1703,10 @@ def shear_from_adcp(adcp_file_path, glider_file_path, options=None):
     ADCP = soundspeed_correction(ADCP)
     ADCP = remove_outliers(ADCP, options)
     ADCP = correct_shear(ADCP, options)
-    ADCP = correct_backscatter(ADCP, data, options)
+    ADCP = correct_backscatter(ADCP, data)
     ADCP = regridADCPdata(ADCP, options)
     ADCP = calcXYZfrom3beam(ADCP, options)
-    ADCP = calcENUfromXYZ(ADCP, data, options)
+    ADCP = calcENUfromXYZ(ADCP, data)
     return ADCP, data
 
 
