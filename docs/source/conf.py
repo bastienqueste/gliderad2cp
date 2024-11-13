@@ -10,9 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../.."))
 
 
 # -- Project information -----------------------------------------------------
@@ -20,7 +21,7 @@ import datetime
 
 year = datetime.date.today().year
 project = "gliderad2cp"
-author = " Bastien Queste, Estel Font and Callum Rollo"
+author = " Bastien Queste, Callum Rollo and Estel Font"
 copyright = f"{year}, {author}"  # noqa
 
 # The full version, including alpha/beta/rc tags
@@ -34,7 +35,13 @@ version = "v0.0.7"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = [
+    "nbsphinx",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "IPython.sphinxext.ipython_console_highlighting",
+]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -42,15 +49,28 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["**.ipynb_checkpoints"]
 
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 html_theme = "alabaster"
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+#
+html_theme_options = {
+    "logo": "logo.png",
+    "logo_name": "gliderad2cp",
+    "github_user": "bastienqueste",
+    "github_repo": "gliderad2cp",
+    "github_banner": True,
+    "fixed_sidebar": True,
+}
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
