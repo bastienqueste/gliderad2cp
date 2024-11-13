@@ -303,7 +303,7 @@ def remapADCPdepth(ADCP, options):
     # z_bin_distance = ADCP["Velocity Range"].values
     
     ## THIS IS THE  BEAM REMAPPING CHANGE HERE :: the addition of the cos factor
-    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1)) ## WRONGG
+    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1))
 
     ADCP["D1"] = (
         ["time", "bin"],
