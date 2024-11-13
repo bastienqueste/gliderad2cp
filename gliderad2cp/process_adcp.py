@@ -154,7 +154,7 @@ def RunningMean(x, N):
 
     grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.nan
     for istep in range(np.shape(grid)[1]):
-        grid[istep : len(x) + istep, istep] = x
+        grid[istep: len(x) + istep, istep] = x
     return np.nanmean(grid, axis=1)[N:-N]
 
 
@@ -271,7 +271,7 @@ def remapADCPdepth(ADCP, options):
     :param options: options dictionary
     :return: ADCP with velocities remapped to depth bins in the variables "Dx"where x is the beam number
     """
-    ## All *_Range coordinates are distance along beam. Verified with data.
+    # All *_Range coordinates are distance along beam. Verified with data.
     if options["top_mounted"]:
         direction = 1
         theta_rad_1 = np.arccos(
@@ -305,7 +305,7 @@ def remapADCPdepth(ADCP, options):
 
     # z_bin_distance = ADCP["Velocity Range"].values
     
-    ## THIS IS THE  BEAM REMAPPING CHANGE HERE :: the addition of the cos factor
+    # THIS IS THE  BEAM REMAPPING CHANGE HERE :: the addition of the cos factor
     z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1))
 
     ADCP["D1"] = (
@@ -340,7 +340,6 @@ def remapADCPdepth(ADCP, options):
         "Please verify the location of ADCP velocity bins relative to pitch and depth of the sensor to make sure ADCP direction has been properly identified."
     )
     return ADCP
-
 
 
 def _heading_correction(ADCP, glider, options):  # TODO: replace with external function
@@ -407,11 +406,6 @@ def _heading_correction(ADCP, glider, options):  # TODO: replace with external f
     def rmsd(x, y, z):
         return np.sqrt(np.mean((norm(x, y, z) - target) ** 2))
 
-    def circ(x):
-        idx = (np.abs(x) > 180).values
-        x[idx] = x[idx] + (360 * -np.sign(x[idx]))
-        return x
-
     def cosd(x):
         return np.cos(np.deg2rad(x))
 
@@ -428,7 +422,7 @@ def _heading_correction(ADCP, glider, options):  # TODO: replace with external f
             + z * cosd(roll) * sind(pitch)
         )
 
-    def rot_y(x, y, z):
+    def rot_y(y, z):
         return y * cosd(roll) - z * sind(roll)
 
     def wrap(x):
@@ -436,7 +430,7 @@ def _heading_correction(ADCP, glider, options):  # TODO: replace with external f
 
     def heading(x, y, z):
         return wrap(
-            atan2d(rot_x(x, sign * y, sign * z), rot_y(x, sign * y, sign * z)) - 90
+            atan2d(rot_x(x, sign * y, sign * z), rot_y(sign * y, sign * z)) - 90
         )
 
     def calibrate(x, y, z, coeffs):
@@ -550,8 +544,7 @@ def remove_outliers(ADCP, options):
     return ADCP
 
 
-
-### Defining coordinate transform functions for the 4 beam ADCP configuration
+# Defining coordinate transform functions for the 4 beam ADCP configuration
 def quad_beam2xyzz_mat():
     M11 = 0.6782
     M12 = 0.0000
@@ -666,7 +659,6 @@ def _shear_correction(ADCP, var, correct=True):
         full_range = np.arange(
             0.2, 0.3, range_interval
         )  # OMAN BEST: np.arange(0.2,0.3,range_interval)
-        cmaps = np.arange(len(full_range)) / len(full_range)
 
         variable = ADCP[var]
         ref = np.cumsum(
@@ -826,9 +818,6 @@ def regridADCPdata(ADCP, options, depth_offsets=None):
         threshold = options["ADCP_regrid_correlation_threshold"]
         means = [
             np.nanmean(ADCP["CorrelationBeam" + str(x)], axis=0) for x in [1, 2, 3, 4]
-        ]
-        stds = [
-            np.nanstd(ADCP["CorrelationBeam" + str(x)], axis=0) for x in [1, 2, 3, 4]
         ]
 
         max_bin = np.argmin(
@@ -1038,12 +1027,6 @@ def calcENUfromXYZ(ADCP, glider, options):
     _gd = (ADCP["Pressure"].values > 5) & (
         np.abs(ADCP["profile_number"] - profile_center) < profile_range * 0.1
     )
-    ##### PLOT 1
-    U = ADCP.isel(time=_gd)["U"].mean(dim="gridded_bin").values.flatten()
-    dP = np.gradient(
-        ADCP.isel(time=_gd)["Depth"].values,
-        ADCP.isel(time=_gd)["time"].astype("float") / 1e9,
-    )
     ADCP["Sh_E"] = (
         ["time", "gridded_bin"],
         ADCP["E"].differentiate("gridded_bin").values,
@@ -1170,29 +1153,12 @@ def get_DAC(ADCP, glider, options):
         except IndexError:
             _log.info("No final GPS for dive " + str(dx))
 
-    dac_e = (gps_e - dr_e) / dt
-    dac_n = (gps_n - dr_n) / dt
     glider["DAC_E"] = interp(meant, (gps_e - dr_e) / dt, t)
     glider["DAC_N"] = interp(meant, (gps_n - dr_n) / dt, t)
 
     glider["DAC_E"] = glider["DAC_E"].bfill().ffill()
     glider["DAC_N"] = glider["DAC_N"].bfill().ffill()
 
-    E, X, Y = grid2d(
-        glider.time.values.astype("float"),
-        glider.latitude,
-        glider.DAC_E,
-        xi=10**9 * 60 * 60 * 3,
-        yi=0.01,
-    )
-
-    N, X, Y = grid2d(
-        glider.time.values.astype("float"),
-        glider.latitude,
-        glider.DAC_N,
-        xi=10**9 * 60 * 60 * 3,
-        yi=0.01,
-    )
     return glider
 
 
@@ -1370,7 +1336,6 @@ def grid_shear_data(ADCP, glider, options):
     :param options: options dictionary
     :return: ADCP with vertically gridded ENU velocities
     """
-    x = np.arange(0, np.shape(ADCP.Sh_E.values)[0], 1)
     yaxis = np.arange(0, np.nanmax(np.ceil(glider.pressure.values)), y_res)
     xaxis = glider.date_float.groupby(glider.profile_number).agg("mean").index
     taxis = pd.to_datetime(
@@ -1399,7 +1364,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
 
     var = ["E", "N"]
 
-    days = np.unique(glider.time.round("D"))
     for pstep in range(len(var)):
         letter = var[pstep]
         # Grid shear to average out sensor + zooplankton noise
@@ -1443,16 +1407,6 @@ def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
             xi=xaxis,
             yi=yaxis,
             fn="mean",
-        )
-
-        # Grid salinity
-        SA, XI, YI = grid2d(
-            glider.profile_number.values,
-            glider.pressure.values,
-            glider.salinity.values,
-            xi=xaxis,
-            yi=yaxis,
-            fn="median",
         )
 
         # Seconds spent in each depth bin, to weight referencing
@@ -1632,7 +1586,6 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
     bins = np.linspace(-1, 1, 100) * 0.5
 
     variables = [E, N]
-    SF = drange / 3
 
     for idx, var in enumerate(variables):
 
@@ -1644,14 +1597,10 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
             N, _ = np.histogram(Nvals, bins=bins, density=True)
             S, _ = np.histogram(Svals, bins=bins, density=True)
 
-            Nm = np.nanmean(Nvals)
-            Sm = np.nanmean(Svals)
             Ns = np.nanstd(Nvals)
             Ss = np.nanstd(Svals)
             Nn = np.count_nonzero(np.isfinite(Nvals))
             Sn = np.count_nonzero(np.isfinite(Svals))
-            Nse = Ns / np.sqrt(Nn)
-            Sse = Ss / np.sqrt(Sn)
 
             N[N == 0] = np.nan
             S[S == 0] = np.nan
@@ -1663,14 +1612,10 @@ def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
         N, _ = np.histogram(Nvals, bins=bins, density=True)
         S, _ = np.histogram(Svals, bins=bins, density=True)
 
-        Nm = np.nanmean(Nvals)
-        Sm = np.nanmean(Svals)
         Ns = np.nanstd(Nvals)
         Ss = np.nanstd(Svals)
         Nn = np.count_nonzero(np.isfinite(Nvals))
         Sn = np.count_nonzero(np.isfinite(Svals))
-        Nse = Ns / np.sqrt(Nn)
-        Sse = Ss / np.sqrt(Sn)
 
         N[N == 0] = np.nan
         S[S == 0] = np.nan
@@ -1724,9 +1669,6 @@ def calc_bias(out, yaxis, taxis, days, options):
         )
     _log.info(R)
     coeff = R[0]
-
-    ADCP_E_old = out["ADCP_E"].copy()
-    ADCP_N_old = out["ADCP_N"].copy()
 
     out["ADCP_E"] = out["ADCP_E"] + get_bias(out["speed_e"], coeff)
     out["ADCP_N"] = out["ADCP_N"] + get_bias(out["speed_n"], coeff)
