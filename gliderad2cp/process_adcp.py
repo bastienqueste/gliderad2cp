@@ -23,6 +23,7 @@ warnings.filterwarnings(
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
 
+
 y_res = 1  # TODO: move to options
 plot_num = 0
 _log = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ def get_declination(data, key):
 
 
 def load(glider_file):
+
     """
     Load glider data for processing by gliderad2cp.
 
@@ -97,7 +99,8 @@ def load(glider_file):
         CT = gsw.CT_from_t(SA, data["temperature"], p)
         data["soundspeed"] = gsw.sound_speed(SA, CT, p)
         data.index.name = None
-        return data
+        return data       
+
     # Read in csv file or pandas file
     if str(glider_file)[-4:] == ".csv":
         data = pd.read_csv(glider_file, parse_dates=["time"])
@@ -162,6 +165,7 @@ def grid2d(x, y, v, xi=1, yi=1, fn="median"):
 
 def RunningMean(x, N):
     # is np.convolve better/faster?
+
     grid = np.ones((len(x) + 2 * N, 1 + 2 * N)) * np.nan
     for istep in range(np.shape(grid)[1]):
         grid[istep : len(x) + istep, istep] = x
@@ -318,7 +322,10 @@ def remapADCPdepth(ADCP, options):
     # Upward facing ADCP, so beam 1 ~= 30 deg on the way up, beam 3 on the way down, when flying at 17.4 degree pitch.
     # Returns angles of each beam from the UP direction
 
-    z_bin_distance = ADCP["Velocity Range"].values
+    # z_bin_distance = ADCP["Velocity Range"].values
+    
+    ## THIS IS THE  BEAM REMAPPING CHANGE HERE :: the addition of the cos factor
+    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1))
 
     ADCP["D1"] = (
         ["time", "bin"],
@@ -439,6 +446,7 @@ def remapADCPdepth(ADCP, options):
         "Please verify the location of ADCP velocity bins relative to pitch and depth of the sensor to make sure ADCP direction has been properly identified."
     )
     return ADCP
+
 
 
 def _heading_correction(ADCP, glider, options):  # TODO: replace with external function
@@ -697,19 +705,19 @@ def remove_outliers(ADCP, options):
         plt.subplot(141)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam1"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 1 Velocity")
+        plt.title('Beam 1 Velocity')
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 2 Velocity")
+        plt.title('Beam 2 Velocity')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 3 Velocity")
+        plt.title('Beam 3 Velocity')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 4 Velocity")
+        plt.title('Beam 4 Velocity')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities")
 
@@ -778,15 +786,15 @@ def remove_outliers(ADCP, options):
         plt.subplot(142)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam2"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 2 Velocity (post-QC)")
+        plt.title('Beam 2 Velocity (post-QC)')
         plt.subplot(143)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam3"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 3 Velocity (post-QC)")
+        plt.title('Beam 3 Velocity (post-QC)')
         plt.subplot(144)
         plt.pcolormesh(ADCP["Velocity Range"], ADCP["time"], ADCP["VelocityBeam4"])
         plt.xlabel("Along beam distance (m)")
-        plt.title("Beam 4 Velocity (post-QC)")
+        plt.title('Beam 4 Velocity (post-QC)')
         if options["plots_directory"]:
             save_plot(options["plots_directory"], "beam_velocities_post_qc")
     return ADCP
@@ -955,7 +963,8 @@ def _shear_correction(ADCP, var, correct=True):
         _gd = ADCP["Depth"] > 5
 
         ### MAKE FIGURE
-        colormap = "viridis"
+        from matplotlib import colormaps
+        colormap = colormaps['viridis']
         alpha = 30 / len(full_range)
         if alpha > 1.0:
             alpha = 0.5
@@ -2853,27 +2862,27 @@ def calc_bias(out, yaxis, taxis, days, options):
 
 def make_dataset(out):
     profiles = np.arange(out["Pressure"].shape[1])
-    depth_bins = np.arange(out["Pressure"].shape[0])
+    pressure_bins = np.arange(out["Pressure"].shape[0])
 
     ds_dict = {}
     for key, val in out.items():
-        if key in ["depth_bin", "profile_num"]:
+        if key in ["pressure_bin", "profile_num"]:
             continue
         ds_dict[key] = (
             (
-                "depth_bin",
+                "pressure_bin",
                 "profile_num",
             ),
             val,
         )
     coords_dict = {
         "profile_num": ("profile_num", profiles),
-        "depth_bin": ("depth_bin", depth_bins),
+        "pressure_bin": ("pressure_bin", pressure_bins),
     }
     ds = xr.Dataset(data_vars=ds_dict, coords=coords_dict)
     ds["profile_datetime"] = (
         "profile_num",
-        pd.to_datetime(ds.date_float.mean(dim="depth_bin").values),
+        pd.to_datetime(ds.date_float.mean(dim="pressure_bin").values),
     )
     return ds
 
