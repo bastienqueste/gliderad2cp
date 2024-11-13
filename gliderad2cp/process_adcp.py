@@ -33,6 +33,7 @@ default_options = {
     "correctZshear": False,
     "correctZZshear": False,
     "ADCP_regrid_correlation_threshold": 20,
+    "top_mounted": False
 }
 
 
@@ -1706,14 +1707,12 @@ def shear_from_adcp(adcp_file_path, glider_file_path, options=None):
     ADCP = correct_backscatter(ADCP, data)
     ADCP = regridADCPdata(ADCP, options)
     ADCP = calcXYZfrom3beam(ADCP, options)
-    ADCP = calcENUfromXYZ(ADCP, data)
+    ADCP = calcENUfromXYZ(ADCP, options)
     return ADCP, data
 
 
-def grid_shear(ADCP, data, options=None):
-    if not options:
-        options = default_options
-    xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options=options)
+def grid_shear(ADCP, data):
+    xaxis, yaxis, taxis, days = grid_shear_data(data)
     out = grid_data(ADCP, data, {}, xaxis, yaxis)
     ds = make_dataset(out)
     return ds
@@ -1729,12 +1728,11 @@ def velocity_from_shear(adcp_file_path, glider_file_path, ADCP, data, options=No
     data["dead_reckoning"] = extra_data["dead_reckoning"]
     data["nav_resource"] = extra_data["nav_resource"]
     data["dive_number"] = extra_data["dive_number"]
-    xaxis, yaxis, taxis, days = grid_shear_data(ADCP, data, options)
-    data = get_DAC(ADCP, data, options)
-    dE, dN, dT = getSurfaceDrift(data, options)
+    xaxis, yaxis, taxis, days = grid_shear_data(data)
+    data = get_DAC(ADCP, data)
     ADCP = bottom_track(ADCP, adcp_file_path, options)
-    out = reference_shear(ADCP, data, dE, dN, dT, xaxis, yaxis, taxis, options)
+    out = reference_shear(ADCP, data, xaxis, yaxis)
     out = grid_data(ADCP, data, out, xaxis, yaxis)
-    out = calc_bias(out, yaxis, taxis, days, options)
+    out = calc_bias(out, yaxis)
     ds = make_dataset(out)
     return ds
