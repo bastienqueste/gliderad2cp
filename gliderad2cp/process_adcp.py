@@ -179,6 +179,7 @@ def load_adcp_glider_data(adcp_file_path, glider_file_path, options):
     ADCP_settings = xr.open_mfdataset(glob(adcp_file_path)[0], group="Config")
     ADCP.attrs = ADCP_settings.attrs
     adcp_time_float = ADCP.time.values.astype("float")
+    ADCP = ADCP.drop_vars(['MatlabTimeStamp'])
     # if ADCP.time.dtype == '<M8[ns]':
     #    adcp_time_float = adcp_time_float / 1e6
     plog("Finished loading ADCP data")
@@ -1248,6 +1249,7 @@ def bottom_track(ADCP, adcp_file_path, options):
     # If we subtract BT velocity from XYZ
     # then we get speed of water
     BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
+    BT = BT.drop_vars(['MatlabTimeStamp'])
     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
 
     thresh = 12
