@@ -647,162 +647,162 @@ def do_beam2xyzz(ADCP):
     return ADCP
 
 
-def _shear_correction(ADCP, var, correct=True):
-    def get_correction_array(row):
-        ### SEPARATION CRITERIA
-        spd_thr_water = np.sqrt(
-            ADCP["X4"] ** 2 + ADCP["Y4"] ** 2 + ((ADCP["Z4"] + ADCP["ZZ4"]) / 2) ** 2
-        )
+# def _shear_correction(ADCP, var, correct=True):
+#     def get_correction_array(row):
+#         ### SEPARATION CRITERIA
+#         spd_thr_water = np.sqrt(
+#             ADCP["X4"] ** 2 + ADCP["Y4"] ** 2 + ((ADCP["Z4"] + ADCP["ZZ4"]) / 2) ** 2
+#         )
 
-        spd = spd_thr_water.values[:, 0]  # .values[:,5] #.mean('bin')
+#         spd = spd_thr_water.values[:, 0]  # .values[:,5] #.mean('bin')
 
-        range_interval = 0.01
-        full_range = np.arange(
-            0.2, 0.3, range_interval
-        )  # OMAN BEST: np.arange(0.2,0.3,range_interval)
+#         range_interval = 0.01
+#         full_range = np.arange(
+#             0.2, 0.3, range_interval
+#         )  # OMAN BEST: np.arange(0.2,0.3,range_interval)
 
-        variable = ADCP[var]
-        ref = np.cumsum(
-            np.insert(
-                variable.isel(time=(spd > full_range[0]) & (spd < full_range[-1]))
-                .diff("bin")
-                .mean("time")
-                .values,
-                0,
-                0,
-            )
-        )
-        ref = ref - np.nanmean(ref)
+#         variable = ADCP[var]
+#         ref = np.cumsum(
+#             np.insert(
+#                 variable.isel(time=(spd > full_range[0]) & (spd < full_range[-1]))
+#                 .diff("bin")
+#                 .mean("time")
+#                 .values,
+#                 0,
+#                 0,
+#             )
+#         )
+#         ref = ref - np.nanmean(ref)
 
-        return ref
+#         return ref
 
-    if correct:
-        ADCP[var] = ADCP[var] - get_correction_array(0)
-        _ = get_correction_array(3)
-        plog("Corrected " + var)
-    else:
-        _ = get_correction_array(0)
+#     if correct:
+#         ADCP[var] = ADCP[var] - get_correction_array(0)
+#         _ = get_correction_array(3)
+#         plog("Corrected " + var)
+#     else:
+#         _ = get_correction_array(0)
 
-    return None
-
-
-def correct_shear(ADCP, options):
-    ADCP = do_beam2xyzz(ADCP)
-    if options["correctZZshear"]:
-        ADCP = do_beam2xyzz(ADCP)
-        _shear_correction(ADCP, "ZZ4")
-        ADCP = do_xyzz2beam(ADCP)
-    if options["correctZshear"]:
-        ADCP = do_beam2xyzz(ADCP)
-        _shear_correction(ADCP, "Z4")
-        ADCP = do_xyzz2beam(ADCP)
-    if options["correctYshear"]:
-        ADCP = do_beam2xyzz(ADCP)
-        _shear_correction(ADCP, "Y4")
-        ADCP = do_xyzz2beam(ADCP)
-    if options["correctXshear"]:
-        ADCP = do_beam2xyzz(ADCP)
-        _shear_correction(ADCP, "X4")
-        ADCP = do_xyzz2beam(ADCP)
-
-    return ADCP
+#     return None
 
 
-def correct_backscatter(ADCP, glider):
-    # https://www.sciencedirect.com/science/article/pii/S0278434304002171#fig2
-    # 2.1. Intensity correction
+# def correct_shear(ADCP, options):
+#     ADCP = do_beam2xyzz(ADCP)
+#     if options["correctZZshear"]:
+#         ADCP = do_beam2xyzz(ADCP)
+#         _shear_correction(ADCP, "ZZ4")
+#         ADCP = do_xyzz2beam(ADCP)
+#     if options["correctZshear"]:
+#         ADCP = do_beam2xyzz(ADCP)
+#         _shear_correction(ADCP, "Z4")
+#         ADCP = do_xyzz2beam(ADCP)
+#     if options["correctYshear"]:
+#         ADCP = do_beam2xyzz(ADCP)
+#         _shear_correction(ADCP, "Y4")
+#         ADCP = do_xyzz2beam(ADCP)
+#     if options["correctXshear"]:
+#         ADCP = do_beam2xyzz(ADCP)
+#         _shear_correction(ADCP, "X4")
+#         ADCP = do_xyzz2beam(ADCP)
 
-    # For a single acoustic target, intensity falls proportional to distance squared.
-    # For volume scattering, on the other hand, approximately half of the loss is
-    # cancelled by the increasing number of (zooplankton) targets ensonified by the
-    # spreading beam. Defining  and  as the corrected and measured ADCP beam intensity,
-    # respectively, the correction for volume scattering is given by
+#     return ADCP
 
-    # I(c) = I(m) + 2( 10 * log(r) + alpha * r )
 
-    # with r the distance from the transducer to each of the depth bins, alpha the
-    # absorption, or attenuation, coefficient, and where the extra factor of 2 accounts for
-    # the return trip the sound pulse must make. For single target scattering, the correction
-    # recommended by RDI, the 10 in Eq. (1) is replaced with 20; this correction has been used,
-    # for example, by Thomson and Allen (2000), who examined macrozooplankton migration and
-    # fish abundance. The rate of absorption in seawater is a function of pressure, temperature,
-    # salinity, pH, and sound frequency; using the empirical equation derived by Francois and
-    # Garrison (1982) for a depth of 100 m, , and  for the ADCP frequency of 307 kHz.
+# def correct_backscatter(ADCP, glider):
+#     # https://www.sciencedirect.com/science/article/pii/S0278434304002171#fig2
+#     # 2.1. Intensity correction
 
-    def francoisgarrison(freq=None, S=None, T=None, pH=8.1, z=None):
-        # Underwater acoustics: calculation of the absorption coefficient
-        #
-        # SYNTAX: a = francoisgarrison(freq,T,S,pH,z)
-        # Units: [freq] = kHz, [T] = Celsius, [S] = ppt, [z] = m, [a] = dB/m
-        #
-        # Reference:
-        # Sound absorption based on ocean measurements. Part II: Boric acid contribution
-        # and equation for total absorption
-        # R.E. Francois and G. R. Garrison
-        # J. Acoust. Soc. Am. 72(6), December 1982
+#     # For a single acoustic target, intensity falls proportional to distance squared.
+#     # For volume scattering, on the other hand, approximately half of the loss is
+#     # cancelled by the increasing number of (zooplankton) targets ensonified by the
+#     # spreading beam. Defining  and  as the corrected and measured ADCP beam intensity,
+#     # respectively, the correction for volume scattering is given by
 
-        # *******************************************************************************
-        # Faro, Ter Set  7 23:46:58 WEST 2021
-        # Written by Orlando Camargo Rodriguez
-        # *******************************************************************************
-        c = 1412.0 + 3.21 * T + 1.19 * S + 0.0167 * z
-        theta = 273.0 + T
-        fxf = freq**2
-        f1 = 2.8 * np.sqrt(S / 35.0) * 10 ** (4.0 - 1245.0 / theta)
-        f2 = 8.17 * 10 ** (8.0 - 1990.0 / theta) / (1.0 + 0.0018 * (S - 35.0))
-        A1 = 8.86 / c * 10 ** (0.78 * pH - 5)
-        A2 = 21.44 * S / c * (1.0 + 0.025 * T)
-        A3 = 3.964e-4 - 1.146e-5 * T + 1.45e-7 * T**2 - 6.5e-10 * T**3
-        ind = T <= 20
-        A3[ind] = (
-            4.937e-4 - 2.59e-5 * T[ind] + 9.11e-7 * T[ind] ** 2 - 1.50e-8 * T[ind] ** 3
-        )
-        P1 = 1.0
-        P2 = 1 - 1.35e-4 * z + 6.2e-9 * z**2
-        P3 = 1 - 3.83e-5 * z + 4.9e-10 * z**2
-        alpha = (
-            A1 * P1 * f1 * fxf / (f1**2 + fxf)
-            + A2 * P2 * f2 * fxf / (f2**2 + fxf)
-            + A3 * P3 * fxf
-        )
-        return alpha / 1000
+#     # I(c) = I(m) + 2( 10 * log(r) + alpha * r )
 
-    a = np.cos(np.deg2rad(47.4))  # Beam 1 and 3 angle from Z 47.5
-    b = np.cos(np.deg2rad(25))  # Beam 2 and 4 angle from Z 25
+#     # with r the distance from the transducer to each of the depth bins, alpha the
+#     # absorption, or attenuation, coefficient, and where the extra factor of 2 accounts for
+#     # the return trip the sound pulse must make. For single target scattering, the correction
+#     # recommended by RDI, the 10 in Eq. (1) is replaced with 20; this correction has been used,
+#     # for example, by Thomson and Allen (2000), who examined macrozooplankton migration and
+#     # fish abundance. The rate of absorption in seawater is a function of pressure, temperature,
+#     # salinity, pH, and sound frequency; using the empirical equation derived by Francois and
+#     # Garrison (1982) for a depth of 100 m, , and  for the ADCP frequency of 307 kHz.
 
-    ADCP["BeamRange1"] = ("bin", ADCP["Velocity Range"].values / a)
-    ADCP["BeamRange2"] = ("bin", ADCP["Velocity Range"].values / b)
-    ADCP["BeamRange3"] = ("bin", ADCP["Velocity Range"].values / a)
-    ADCP["BeamRange4"] = ("bin", ADCP["Velocity Range"].values / b)
+#     def francoisgarrison(freq=None, S=None, T=None, pH=8.1, z=None):
+#         # Underwater acoustics: calculation of the absorption coefficient
+#         #
+#         # SYNTAX: a = francoisgarrison(freq,T,S,pH,z)
+#         # Units: [freq] = kHz, [T] = Celsius, [S] = ppt, [z] = m, [a] = dB/m
+#         #
+#         # Reference:
+#         # Sound absorption based on ocean measurements. Part II: Boric acid contribution
+#         # and equation for total absorption
+#         # R.E. Francois and G. R. Garrison
+#         # J. Acoust. Soc. Am. 72(6), December 1982
 
-    ADCP["AcousticAttenuation"] = (
-        "time",
-        francoisgarrison(
-            freq=1000,
-            S=interp(
-                glider.time.values.astype("float"),
-                glider.salinity.interpolate("index").bfill().values,
-                ADCP.time.values.astype("float"),
-            ),
-            T=interp(
-                glider.time.values.astype("float"),
-                glider.temperature.interpolate("index").bfill().values,
-                ADCP.time.values.astype("float"),
-            ),
-            pH=8.1,
-            z=ADCP["Depth"].values,
-        ),
-    )
+#         # *******************************************************************************
+#         # Faro, Ter Set  7 23:46:58 WEST 2021
+#         # Written by Orlando Camargo Rodriguez
+#         # *******************************************************************************
+#         c = 1412.0 + 3.21 * T + 1.19 * S + 0.0167 * z
+#         theta = 273.0 + T
+#         fxf = freq**2
+#         f1 = 2.8 * np.sqrt(S / 35.0) * 10 ** (4.0 - 1245.0 / theta)
+#         f2 = 8.17 * 10 ** (8.0 - 1990.0 / theta) / (1.0 + 0.0018 * (S - 35.0))
+#         A1 = 8.86 / c * 10 ** (0.78 * pH - 5)
+#         A2 = 21.44 * S / c * (1.0 + 0.025 * T)
+#         A3 = 3.964e-4 - 1.146e-5 * T + 1.45e-7 * T**2 - 6.5e-10 * T**3
+#         ind = T <= 20
+#         A3[ind] = (
+#             4.937e-4 - 2.59e-5 * T[ind] + 9.11e-7 * T[ind] ** 2 - 1.50e-8 * T[ind] ** 3
+#         )
+#         P1 = 1.0
+#         P2 = 1 - 1.35e-4 * z + 6.2e-9 * z**2
+#         P3 = 1 - 3.83e-5 * z + 4.9e-10 * z**2
+#         alpha = (
+#             A1 * P1 * f1 * fxf / (f1**2 + fxf)
+#             + A2 * P2 * f2 * fxf / (f2**2 + fxf)
+#             + A3 * P3 * fxf
+#         )
+#         return alpha / 1000
 
-    for beam in ["1", "2", "3", "4"]:
-        ADCP["AmplitudeNew" + beam] = (
-            ["time", "bin"],
-            (
-                ADCP["AmplitudeBeam" + beam]
-                + 2 * ADCP["AcousticAttenuation"] * ADCP["BeamRange" + beam]
-            ).values,
-        )  # + 20 int(particule attenuation,range)
-    return ADCP
+#     a = np.cos(np.deg2rad(47.4))  # Beam 1 and 3 angle from Z 47.5
+#     b = np.cos(np.deg2rad(25))  # Beam 2 and 4 angle from Z 25
+
+#     ADCP["BeamRange1"] = ("bin", ADCP["Velocity Range"].values / a)
+#     ADCP["BeamRange2"] = ("bin", ADCP["Velocity Range"].values / b)
+#     ADCP["BeamRange3"] = ("bin", ADCP["Velocity Range"].values / a)
+#     ADCP["BeamRange4"] = ("bin", ADCP["Velocity Range"].values / b)
+
+#     ADCP["AcousticAttenuation"] = (
+#         "time",
+#         francoisgarrison(
+#             freq=1000,
+#             S=interp(
+#                 glider.time.values.astype("float"),
+#                 glider.salinity.interpolate("index").bfill().values,
+#                 ADCP.time.values.astype("float"),
+#             ),
+#             T=interp(
+#                 glider.time.values.astype("float"),
+#                 glider.temperature.interpolate("index").bfill().values,
+#                 ADCP.time.values.astype("float"),
+#             ),
+#             pH=8.1,
+#             z=ADCP["Depth"].values,
+#         ),
+#     )
+
+#     for beam in ["1", "2", "3", "4"]:
+#         ADCP["AmplitudeNew" + beam] = (
+#             ["time", "bin"],
+#             (
+#                 ADCP["AmplitudeBeam" + beam]
+#                 + 2 * ADCP["AcousticAttenuation"] * ADCP["BeamRange" + beam]
+#             ).values,
+#         )  # + 20 int(particule attenuation,range)
+#     return ADCP
 
 
 def regridADCPdata(ADCP, options, depth_offsets=None):
@@ -1058,277 +1058,277 @@ def calcENUfromXYZ(ADCP, options):
     return ADCP
 
 
-def get_DAC(ADCP, glider):
-    """
-    Estimate dive averaged horizontal currents for the glider. This function requires estimates of the glider's
-    horizontal and vertical speed through water
+# def get_DAC(ADCP, glider):
+#     """
+#     Estimate dive averaged horizontal currents for the glider. This function requires estimates of the glider's
+#     horizontal and vertical speed through water
 
-    :param ADCP: xr.DataSet of ADCP data
-    :param glider: pd.DataFrame of glider data
-    :param options: options dictionary
-    :return: glider DataFrame with estimates of dive average current
-    """
+#     :param ADCP: xr.DataSet of ADCP data
+#     :param glider: pd.DataFrame of glider data
+#     :param options: options dictionary
+#     :return: glider DataFrame with estimates of dive average current
+#     """
 
-    ## Calculate full x-y dead reckoning during each dive
-    def reset_transport_at_GPS(arr):
-        def ffill(arr):
-            return pd.DataFrame(arr).ffill().values.flatten()
+#     ## Calculate full x-y dead reckoning during each dive
+#     def reset_transport_at_GPS(arr):
+#         def ffill(arr):
+#             return pd.DataFrame(arr).ffill().values.flatten()
 
-        ref = np.zeros(np.shape(arr)) * np.nan
-        ref[_gps] = arr[_gps]
-        return arr - ffill(ref)
+#         ref = np.zeros(np.shape(arr)) * np.nan
+#         ref[_gps] = arr[_gps]
+#         return arr - ffill(ref)
 
-    _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
+#     _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
 
-    t = glider.date_float.values * 1e-9
-    heading = interp(
-        ADCP["time"].values.astype("float"),
-        ADCP["Heading"].values,
-        glider.date_float.values,
-    )
-    vg_e = np.nan_to_num(glider["speed_horz"] * np.sin(heading * np.pi / 180))
-    vg_n = np.nan_to_num(glider["speed_horz"] * np.cos(heading * np.pi / 180))
+#     t = glider.date_float.values * 1e-9
+#     heading = interp(
+#         ADCP["time"].values.astype("float"),
+#         ADCP["Heading"].values,
+#         glider.date_float.values,
+#     )
+#     vg_e = np.nan_to_num(glider["speed_horz"] * np.sin(heading * np.pi / 180))
+#     vg_n = np.nan_to_num(glider["speed_horz"] * np.cos(heading * np.pi / 180))
 
-    glider["speed_e"] = vg_e
-    glider["speed_n"] = vg_n
+#     glider["speed_e"] = vg_e
+#     glider["speed_n"] = vg_n
 
-    de = np.cumsum(np.append(0, vg_e[1:] * np.diff(t)))
-    dn = np.cumsum(np.append(0, vg_n[1:] * np.diff(t)))
+#     de = np.cumsum(np.append(0, vg_e[1:] * np.diff(t)))
+#     dn = np.cumsum(np.append(0, vg_n[1:] * np.diff(t)))
 
-    de = reset_transport_at_GPS(de)
-    dn = reset_transport_at_GPS(dn)
+#     de = reset_transport_at_GPS(de)
+#     dn = reset_transport_at_GPS(dn)
 
-    ## Calculate on per dive basis
-    dnum = np.unique(glider.dive_number.values)
-    sidx = np.zeros(np.shape(dnum)) * np.nan
-    didx = np.zeros(np.shape(dnum)) * np.nan
+#     ## Calculate on per dive basis
+#     dnum = np.unique(glider.dive_number.values)
+#     sidx = np.zeros(np.shape(dnum)) * np.nan
+#     didx = np.zeros(np.shape(dnum)) * np.nan
 
-    for idx, dx in enumerate(dnum):
-        try:
-            sidx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[0]
-            didx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[-1]
-        except IndexError:
-            continue
+#     for idx, dx in enumerate(dnum):
+#         try:
+#             sidx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[0]
+#             didx[idx] = np.flatnonzero((glider.dive_number.values == dx) & _gps)[-1]
+#         except IndexError:
+#             continue
 
-    _gd = np.isfinite(sidx + didx + dnum)
-    dnum = dnum[_gd]
-    sidx = sidx[_gd]
-    didx = didx[_gd]
+#     _gd = np.isfinite(sidx + didx + dnum)
+#     dnum = dnum[_gd]
+#     sidx = sidx[_gd]
+#     didx = didx[_gd]
 
-    sidx = sidx.astype(int)
-    didx = didx.astype(int)
+#     sidx = sidx.astype(int)
+#     didx = didx.astype(int)
 
-    surf_lat = glider.latitude.values[sidx]
-    surf_lon = glider.longitude.values[sidx]
-    surf_time = t[sidx]
+#     surf_lat = glider.latitude.values[sidx]
+#     surf_lon = glider.longitude.values[sidx]
+#     surf_time = t[sidx]
 
-    dive_lat = glider.latitude.values[didx]
-    dive_lon = glider.longitude.values[didx]
-    dive_time = t[didx]
+#     dive_lat = glider.latitude.values[didx]
+#     dive_lon = glider.longitude.values[didx]
+#     dive_time = t[didx]
 
-    dr_e = np.zeros(np.shape(dnum)) * np.nan
-    dr_n = np.zeros(np.shape(dnum)) * np.nan
-    gps_e = np.zeros(np.shape(dnum)) * np.nan
-    gps_n = np.zeros(np.shape(dnum)) * np.nan
-    dt = np.zeros(np.shape(dnum)) * np.nan
-    meant = np.zeros(np.shape(dnum)) * np.nan
+#     dr_e = np.zeros(np.shape(dnum)) * np.nan
+#     dr_n = np.zeros(np.shape(dnum)) * np.nan
+#     gps_e = np.zeros(np.shape(dnum)) * np.nan
+#     gps_n = np.zeros(np.shape(dnum)) * np.nan
+#     dt = np.zeros(np.shape(dnum)) * np.nan
+#     meant = np.zeros(np.shape(dnum)) * np.nan
 
-    def lon2m(x, y):
-        return gsw.distance([x, x + 1], [y, y])
+#     def lon2m(x, y):
+#         return gsw.distance([x, x + 1], [y, y])
 
-    def lat2m(x, y):
-        return gsw.distance([x, x], [y, y + 1])
+#     def lat2m(x, y):
+#         return gsw.distance([x, x], [y, y + 1])
 
-    for idx, dx in enumerate(dnum):
-        try:
-            dr_e[idx] = de[sidx[idx + 1] - 1]
-            dr_n[idx] = dn[sidx[idx + 1] - 1]
-            gps_e[idx] = (surf_lon[idx + 1] - dive_lon[idx]) * lon2m(
-                dive_lon[idx], dive_lat[idx]
-            )[0]
-            gps_n[idx] = (surf_lat[idx + 1] - dive_lat[idx]) * lat2m(
-                dive_lon[idx], dive_lat[idx]
-            )[0]
-            dt[idx] = surf_time[idx + 1] - dive_time[idx]
-            meant[idx] = (surf_time[idx + 1] + dive_time[idx]) / 2
-        except IndexError:
-            _log.info("No final GPS for dive " + str(dx))
+#     for idx, dx in enumerate(dnum):
+#         try:
+#             dr_e[idx] = de[sidx[idx + 1] - 1]
+#             dr_n[idx] = dn[sidx[idx + 1] - 1]
+#             gps_e[idx] = (surf_lon[idx + 1] - dive_lon[idx]) * lon2m(
+#                 dive_lon[idx], dive_lat[idx]
+#             )[0]
+#             gps_n[idx] = (surf_lat[idx + 1] - dive_lat[idx]) * lat2m(
+#                 dive_lon[idx], dive_lat[idx]
+#             )[0]
+#             dt[idx] = surf_time[idx + 1] - dive_time[idx]
+#             meant[idx] = (surf_time[idx + 1] + dive_time[idx]) / 2
+#         except IndexError:
+#             _log.info("No final GPS for dive " + str(dx))
 
-    glider["DAC_E"] = interp(meant, (gps_e - dr_e) / dt, t)
-    glider["DAC_N"] = interp(meant, (gps_n - dr_n) / dt, t)
+#     glider["DAC_E"] = interp(meant, (gps_e - dr_e) / dt, t)
+#     glider["DAC_N"] = interp(meant, (gps_n - dr_n) / dt, t)
 
-    glider["DAC_E"] = glider["DAC_E"].bfill().ffill()
-    glider["DAC_N"] = glider["DAC_N"].bfill().ffill()
+#     glider["DAC_E"] = glider["DAC_E"].bfill().ffill()
+#     glider["DAC_N"] = glider["DAC_N"].bfill().ffill()
 
-    return glider
-
-
-def getSurfaceDrift(glider):
-    _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
-
-    def lon2m(x, y):
-        return gsw.distance([x, x + 1], [y, y])
-
-    def lat2m(x, y):
-        return gsw.distance([x, x], [y, y + 1])
-
-    dnum = glider.dive_number.values[_gps]
-
-    lons = glider.longitude.values[_gps]
-    lats = glider.latitude.values[_gps]
-
-    dlons = np.gradient(lons)
-    dlats = np.gradient(lats)
-
-    for idx in range(len(lons)):
-        dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
-        dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
-
-    times = glider.time.values.astype("float")[_gps] / 10**9
-    dtimes = np.gradient(times)
-
-    dE = np.full(int(np.nanmax(glider.dive_number)), np.nan)
-    dN = np.full(int(np.nanmax(glider.dive_number)), np.nan)
-    dT = np.full(int(np.nanmax(glider.dive_number)), np.nan)
-
-    for idx in range(len(dE)):
-        _gd = (dtimes < 21) & (dnum == idx + 1)
-        dE[idx] = np.nanmedian(dlons[_gd] / dtimes[_gd])
-        dN[idx] = np.nanmedian(dlats[_gd] / dtimes[_gd])
-        dT[idx] = np.nanmean(times[_gd])
-
-    dT = dT * 10**9
-    return dE, dN, dT
+#     return glider
 
 
-def bottom_track(ADCP, adcp_file_path, options):
-    if options["top_mounted"]:
-        plog("ERROR: ADCP is top mounted. Not processing bottom track data")
-        return ADCP
+# def getSurfaceDrift(glider):
+#     _gps = (glider.dead_reckoning.values < 1) & (glider.nav_resource.values == 116)
 
-    def sin(x):
-        return np.sin(np.deg2rad(x))
+#     def lon2m(x, y):
+#         return gsw.distance([x, x + 1], [y, y])
 
-    def cos(x):
-        return np.cos(np.deg2rad(x))
+#     def lat2m(x, y):
+#         return gsw.distance([x, x], [y, y + 1])
 
-    # BT gives us speed of the glider
-    # If we subtract BT velocity from XYZ
-    # then we get speed of water
-    BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
-    BT = BT.drop_vars(['MatlabTimeStamp'])
-    BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
+#     dnum = glider.dive_number.values[_gps]
 
-    thresh = 12
+#     lons = glider.longitude.values[_gps]
+#     lats = glider.latitude.values[_gps]
 
-    ind = (
-        (BT["VelocityBeam1"] > -2)
-        & (BT["VelocityBeam2"] > -2)
-        & (BT["VelocityBeam4"] > -2)
-    )
-    ind2 = (
-        (BT["FOMBeam1"] < thresh)
-        & (BT["FOMBeam2"] < thresh)
-        & (BT["FOMBeam4"] < thresh)
-    )
-    BT = BT.isel(time=ind.values & ind2.values)
+#     dlons = np.gradient(lons)
+#     dlats = np.gradient(lats)
 
-    full_time = ADCP["time"].values.astype("float")
-    BT_time = BT["time"].values.astype("float")
-    matching = []
-    for idx in range(len(BT_time)):
-        matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
+#     for idx in range(len(lons)):
+#         dlons[idx] = dlons[idx] * lon2m(lons[idx], lats[idx])[0]
+#         dlats[idx] = dlats[idx] * lat2m(lons[idx], lats[idx])[0]
 
-    ADCP_profile = ADCP["profile_number"].values.copy()
-    ADCP_depth = ADCP["Pressure"].values.copy()
-    for idx in range(np.nanmax(ADCP_profile).astype(int)):
-        _gd = ADCP_profile == idx
-        if np.count_nonzero(_gd) == 0:
-            _log.info("Profile " + str(idx) + " was empty")
-        else:
-            ADCP_depth[_gd] = np.nanmax(ADCP_depth[_gd])
-    ADCP_depth = ADCP_depth[matching]
+#     times = glider.time.values.astype("float")[_gps] / 10**9
+#     dtimes = np.gradient(times)
 
-    _gd = np.abs(ADCP_depth - BT["Pressure"]).values < 15
-    BT = BT.isel(time=_gd)
-    full_time = ADCP["time"].values.astype("float")
-    BT_time = BT["time"].values.astype("float")
-    matching = []
-    for idx in range(len(BT_time)):
-        matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
+#     dE = np.full(int(np.nanmax(glider.dive_number)), np.nan)
+#     dN = np.full(int(np.nanmax(glider.dive_number)), np.nan)
+#     dT = np.full(int(np.nanmax(glider.dive_number)), np.nan)
 
-    C_old = BT["SpeedOfSound"].values
-    C_new = ADCP["SpeedOfSound"].isel(time=matching).values
+#     for idx in range(len(dE)):
+#         _gd = (dtimes < 21) & (dnum == idx + 1)
+#         dE[idx] = np.nanmedian(dlons[_gd] / dtimes[_gd])
+#         dN[idx] = np.nanmedian(dlats[_gd] / dtimes[_gd])
+#         dT[idx] = np.nanmean(times[_gd])
 
-    a = 47.5  # Beam 1 and 3 angle from Z
-    b = 25  # Beam 2 and 4 angle from Z
-    xyz2beam_fore = np.array(
-        [[sin(a), 0, cos(a)], [0, -sin(b), cos(b)], [0, sin(b), cos(b)]]
-    )
-    beam2xyz_fore = np.linalg.inv(xyz2beam_fore)
-
-    BT_X4, BT_Y4, BT_Z4 = beam2xyz_fore @ np.array(
-        [
-            BT["VelocityBeam1"] * (C_new / C_old),
-            BT["VelocityBeam2"] * (C_new / C_old),
-            BT["VelocityBeam4"] * (C_new / C_old),
-        ]
-    )
-
-    def M_xyz2enu(heading, pitch, roll):
-        hh = np.pi * (heading - 90) / 180
-        pp = np.pi * pitch / 180
-        rr = np.pi * roll / 180
-
-        _H = np.array(
-            [[np.cos(hh), np.sin(hh), 0], [-np.sin(hh), np.cos(hh), 0], [0, 0, 1]]
-        )
-        _P = np.array(
-            [[np.cos(pp), 0, -np.sin(pp)], [0, 1, 0], [np.sin(pp), 0, np.cos(pp)]]
-        )
-        _R = np.array(
-            [[1, 0, 0], [0, np.cos(rr), -np.sin(rr)], [0, np.sin(rr), np.cos(rr)]]
-        )
-
-        _M = _H @ _P @ _R
-        return _M
-
-    H = BT["Heading"].values
-    P = BT["Pitch"].values
-    R = BT["Roll"].values
-
-    BT_E = np.full_like(H, np.nan)
-    BT_N = np.full_like(H, np.nan)
-    BT_U = np.full_like(H, np.nan)
-
-    if options["top_mounted"]:
-        direction = 1
-    else:
-        direction = -1
-
-    n = len(BT_X4)
-    for i in range(n):
-        BT_E[i], BT_N[i], BT_U[i] = M_xyz2enu(H[i], P[i], R[i]) @ [
-            BT_X4[i],
-            BT_Y4[i] * direction,
-            BT_Z4[i] * direction,
-        ]
-
-    bt_e = np.full_like(full_time, np.nan)
-    bt_e[matching] = BT_E
-    bt_n = np.full_like(full_time, np.nan)
-    bt_n[matching] = BT_N
-    bt_u = np.full_like(full_time, np.nan)
-    bt_u[matching] = BT_U
-
-    ADCP["BT_E"] = ("time", bt_e)
-    ADCP["BT_N"] = ("time", bt_n)
-    ADCP["BT_U"] = ("time", bt_u)
-
-    return ADCP
+#     dT = dT * 10**9
+#     return dE, dN, dT
 
 
-def grid_shear_data(glider):
+# def bottom_track(ADCP, adcp_file_path, options):
+#     if options["top_mounted"]:
+#         plog("ERROR: ADCP is top mounted. Not processing bottom track data")
+#         return ADCP
+
+#     def sin(x):
+#         return np.sin(np.deg2rad(x))
+
+#     def cos(x):
+#         return np.cos(np.deg2rad(x))
+
+#     # BT gives us speed of the glider
+#     # If we subtract BT velocity from XYZ
+#     # then we get speed of water
+#     BT = xr.open_mfdataset(adcp_file_path, group="Data/AverageBT")
+#     BT = BT.drop_vars(['MatlabTimeStamp'])
+#     BT = BT.where(BT.time < ADCP.time.values[-1]).dropna(dim="time", how="all")
+
+#     thresh = 12
+
+#     ind = (
+#         (BT["VelocityBeam1"] > -2)
+#         & (BT["VelocityBeam2"] > -2)
+#         & (BT["VelocityBeam4"] > -2)
+#     )
+#     ind2 = (
+#         (BT["FOMBeam1"] < thresh)
+#         & (BT["FOMBeam2"] < thresh)
+#         & (BT["FOMBeam4"] < thresh)
+#     )
+#     BT = BT.isel(time=ind.values & ind2.values)
+
+#     full_time = ADCP["time"].values.astype("float")
+#     BT_time = BT["time"].values.astype("float")
+#     matching = []
+#     for idx in range(len(BT_time)):
+#         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
+
+#     ADCP_profile = ADCP["profile_number"].values.copy()
+#     ADCP_depth = ADCP["Pressure"].values.copy()
+#     for idx in range(np.nanmax(ADCP_profile).astype(int)):
+#         _gd = ADCP_profile == idx
+#         if np.count_nonzero(_gd) == 0:
+#             _log.info("Profile " + str(idx) + " was empty")
+#         else:
+#             ADCP_depth[_gd] = np.nanmax(ADCP_depth[_gd])
+#     ADCP_depth = ADCP_depth[matching]
+
+#     _gd = np.abs(ADCP_depth - BT["Pressure"]).values < 15
+#     BT = BT.isel(time=_gd)
+#     full_time = ADCP["time"].values.astype("float")
+#     BT_time = BT["time"].values.astype("float")
+#     matching = []
+#     for idx in range(len(BT_time)):
+#         matching.append(np.argmin(np.abs(BT_time[idx] - full_time)))
+
+#     C_old = BT["SpeedOfSound"].values
+#     C_new = ADCP["SpeedOfSound"].isel(time=matching).values
+
+#     a = 47.5  # Beam 1 and 3 angle from Z
+#     b = 25  # Beam 2 and 4 angle from Z
+#     xyz2beam_fore = np.array(
+#         [[sin(a), 0, cos(a)], [0, -sin(b), cos(b)], [0, sin(b), cos(b)]]
+#     )
+#     beam2xyz_fore = np.linalg.inv(xyz2beam_fore)
+
+#     BT_X4, BT_Y4, BT_Z4 = beam2xyz_fore @ np.array(
+#         [
+#             BT["VelocityBeam1"] * (C_new / C_old),
+#             BT["VelocityBeam2"] * (C_new / C_old),
+#             BT["VelocityBeam4"] * (C_new / C_old),
+#         ]
+#     )
+
+#     def M_xyz2enu(heading, pitch, roll):
+#         hh = np.pi * (heading - 90) / 180
+#         pp = np.pi * pitch / 180
+#         rr = np.pi * roll / 180
+
+#         _H = np.array(
+#             [[np.cos(hh), np.sin(hh), 0], [-np.sin(hh), np.cos(hh), 0], [0, 0, 1]]
+#         )
+#         _P = np.array(
+#             [[np.cos(pp), 0, -np.sin(pp)], [0, 1, 0], [np.sin(pp), 0, np.cos(pp)]]
+#         )
+#         _R = np.array(
+#             [[1, 0, 0], [0, np.cos(rr), -np.sin(rr)], [0, np.sin(rr), np.cos(rr)]]
+#         )
+
+#         _M = _H @ _P @ _R
+#         return _M
+
+#     H = BT["Heading"].values
+#     P = BT["Pitch"].values
+#     R = BT["Roll"].values
+
+#     BT_E = np.full_like(H, np.nan)
+#     BT_N = np.full_like(H, np.nan)
+#     BT_U = np.full_like(H, np.nan)
+
+#     if options["top_mounted"]:
+#         direction = 1
+#     else:
+#         direction = -1
+
+#     n = len(BT_X4)
+#     for i in range(n):
+#         BT_E[i], BT_N[i], BT_U[i] = M_xyz2enu(H[i], P[i], R[i]) @ [
+#             BT_X4[i],
+#             BT_Y4[i] * direction,
+#             BT_Z4[i] * direction,
+#         ]
+
+#     bt_e = np.full_like(full_time, np.nan)
+#     bt_e[matching] = BT_E
+#     bt_n = np.full_like(full_time, np.nan)
+#     bt_n[matching] = BT_N
+#     bt_u = np.full_like(full_time, np.nan)
+#     bt_u[matching] = BT_U
+
+#     ADCP["BT_E"] = ("time", bt_e)
+#     ADCP["BT_N"] = ("time", bt_n)
+#     ADCP["BT_U"] = ("time", bt_u)
+
+#     return ADCP
+
+
+def grid_shear_data(glider): # TODO name and docstring are way off - this is just defining axis
     """
     Grid ENU velocities into standardised vertical bins.
 
@@ -1346,324 +1346,324 @@ def grid_shear_data(glider):
     return xaxis, yaxis, taxis, days
 
 
-def reference_shear(ADCP, glider, xaxis, yaxis):
-    """
-    Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
+# def reference_shear(ADCP, glider, xaxis, yaxis):
+#     """
+#     Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
 
-    :param ADCP: xr.DataSet of ADCP data
-    :param options: options dictionary
-    :param dE: eastward surface drift velocity
-    :param dN: northward surface drift velocity
-    :param dT: timestamps surface drift velocity
-    :param xaxis: profile numbers of gridded velocity data
-    :param yaxis: depth bins of gridded velocity data
-    :param taxis: time of gridded velocity data
-    :param options: options dict for processing
-    :return:  xr.DataSet of referenced gridded N and E velocities
-    """
-    out = {}
+#     :param ADCP: xr.DataSet of ADCP data
+#     :param options: options dictionary
+#     :param dE: eastward surface drift velocity
+#     :param dN: northward surface drift velocity
+#     :param dT: timestamps surface drift velocity
+#     :param xaxis: profile numbers of gridded velocity data
+#     :param yaxis: depth bins of gridded velocity data
+#     :param taxis: time of gridded velocity data
+#     :param options: options dict for processing
+#     :return:  xr.DataSet of referenced gridded N and E velocities
+#     """
+#     out = {}
 
-    var = ["E", "N"]
+#     var = ["E", "N"]
 
-    for pstep in range(len(var)):
-        letter = var[pstep]
-        # Grid shear to average out sensor + zooplankton noise
-        Sh, XI, YI = grid2d(
-            np.tile(ADCP.profile_number.values, (len(ADCP.gridded_bin), 1)).T.flatten(),
-            ADCP.bin_depth.values.flatten(),
-            ADCP["Sh_" + letter].values.flatten(),
-            xi=xaxis,
-            yi=yaxis,
-            fn="mean",
-        )
+#     for pstep in range(len(var)):
+#         letter = var[pstep]
+#         # Grid shear to average out sensor + zooplankton noise
+#         Sh, XI, YI = grid2d(
+#             np.tile(ADCP.profile_number.values, (len(ADCP.gridded_bin), 1)).T.flatten(),
+#             ADCP.bin_depth.values.flatten(),
+#             ADCP["Sh_" + letter].values.flatten(),
+#             xi=xaxis,
+#             yi=yaxis,
+#             fn="mean",
+#         )
 
-        # Integrate shear vertically
-        _bd = ~np.isfinite(
-            Sh
-        )  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
-        Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
-        V = (
-            np.cumsum(Sh, axis=0) * y_res
-        )  # Cumulative sum of shear to recover velocity profile
-        V[_bd] = np.nan  # Return NaNs to their rightful place.
-        V = V - np.tile(
-            np.nanmean(V, axis=0), (np.shape(V)[0], 1)
-        )  # Make mean of baroclinic profiles equal to 0
+#         # Integrate shear vertically
+#         _bd = ~np.isfinite(
+#             Sh
+#         )  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
+#         Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
+#         V = (
+#             np.cumsum(Sh, axis=0) * y_res
+#         )  # Cumulative sum of shear to recover velocity profile
+#         V[_bd] = np.nan  # Return NaNs to their rightful place.
+#         V = V - np.tile(
+#             np.nanmean(V, axis=0), (np.shape(V)[0], 1)
+#         )  # Make mean of baroclinic profiles equal to 0
 
-        # Grid DAC
-        DAC, XI, YI = grid2d(
-            glider.profile_number.values,
-            glider.pressure.values,
-            glider["DAC_" + letter].values,
-            xi=xaxis,
-            yi=yaxis,
-            fn="mean",
-        )
+#         # Grid DAC
+#         DAC, XI, YI = grid2d(
+#             glider.profile_number.values,
+#             glider.pressure.values,
+#             glider["DAC_" + letter].values,
+#             xi=xaxis,
+#             yi=yaxis,
+#             fn="mean",
+#         )
 
-        # Grid vertical speed
-        dPdz, XI, YI = grid2d(
-            glider.profile_number.values,
-            glider.pressure.values,
-            glider["speed_vert"].values,
-            xi=xaxis,
-            yi=yaxis,
-            fn="mean",
-        )
+#         # Grid vertical speed
+#         dPdz, XI, YI = grid2d(
+#             glider.profile_number.values,
+#             glider.pressure.values,
+#             glider["speed_vert"].values,
+#             xi=xaxis,
+#             yi=yaxis,
+#             fn="mean",
+#         )
 
-        # Seconds spent in each depth bin, to weight referencing
-        SpB = y_res / dPdz
-        SpB[np.isinf(SpB)] = 0
-        strictness = 1
-        SpB_std = np.nanstd(SpB.flatten())
-        SpB[np.abs(SpB) > (strictness * SpB_std)] = strictness * SpB_std
+#         # Seconds spent in each depth bin, to weight referencing
+#         SpB = y_res / dPdz
+#         SpB[np.isinf(SpB)] = 0
+#         strictness = 1
+#         SpB_std = np.nanstd(SpB.flatten())
+#         SpB[np.abs(SpB) > (strictness * SpB_std)] = strictness * SpB_std
 
-        # Baroclinic velocity, weighted by depth residence time, should be equal to DAC
-        # So the reference to add to a baroclinic profile of mean = 0 is the DAC - the weighted baroclinic velocity.
-        Ref = np.nanmean(DAC, axis=0) - np.nansum(V * SpB, axis=0) / np.nansum(
-            SpB, axis=0
-        )
+#         # Baroclinic velocity, weighted by depth residence time, should be equal to DAC
+#         # So the reference to add to a baroclinic profile of mean = 0 is the DAC - the weighted baroclinic velocity.
+#         Ref = np.nanmean(DAC, axis=0) - np.nansum(V * SpB, axis=0) / np.nansum(
+#             SpB, axis=0
+#         )
 
-        # Now we reference the velocity
-        V = V + np.tile(Ref, (np.shape(V)[0], 1))
-        out["ADCP_" + letter] = V
-    return out
-
-
-def _grid_glider_data(glider, out, xaxis, yaxis):
-    exclude_from_grid = [
-        "AD2CP_ALT",
-        "AD2CP_HEADING",
-        "AD2CP_PITCH",
-        "AD2CP_PRESSURE",
-        "AD2CP_ROLL",
-        "AROD_FT_DO",
-        "AROD_FT_TEMP",
-        "Altitude",
-        "AngCmd",
-        "AngPos",
-        "BallastCmd",
-        "BallastPos",
-        "dead_reckoning",
-        "declination",
-        "Depth",
-        "DesiredH",
-        "LinCmd",
-        "LinPos",
-        "NAV_DEPTH",
-        "NAV_LATITUDE",
-        "NAV_LONGITUDE",
-        "nav_resource",
-        "NavState",
-        "Pa",
-        "Pitch",
-        "Roll",
-        "Heading",
-        "SecurityLevel",
-        "Temperature",
-        "time",
-        "Unnamed: 22",
-        "Unnamed: 28",
-        "Voltage",
-        "missionNum",
-        "Lat",
-        "Lon",
-    ]
-
-    variables = glider.columns
-    variables = [x for x in variables if x not in exclude_from_grid]
-
-    def grid(name):
-        return grid2d(
-            glider.profile_number.values,
-            glider.pressure.values,
-            glider[name].values,
-            xi=xaxis,
-            yi=yaxis,
-            fn="mean",
-        )[0]
-
-    for varname in variables:
-        try:
-            out[varname] = grid(varname)
-        except IndexError:
-            _log.info('Variable "' + varname + '" failed to grid.')
-
-    return out
+#         # Now we reference the velocity
+#         V = V + np.tile(Ref, (np.shape(V)[0], 1))
+#         out["ADCP_" + letter] = V
+#     return out
 
 
-def grid_data(ADCP, glider, out, xaxis, yaxis):
-    ADCP_pnum = np.tile(ADCP.profile_number, (len(ADCP.gridded_bin), 1)).T
-    out["Sh_E"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_E.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_N"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_N.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Sh_U"] = grid2d(
-        ADCP_pnum.flatten(),
-        ADCP.bin_depth.values.flatten(),
-        ADCP.Sh_U.values.flatten(),
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Heading"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Heading"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pitch"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pitch"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Roll"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Roll"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["latitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Latitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["longitude"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Longitude"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["profile_number"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["profile_number"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
-    out["Pressure"] = grid2d(
-        ADCP.profile_number.values,
-        ADCP.Pressure.values,
-        ADCP["Pressure"].values,
-        xi=xaxis,
-        yi=yaxis,
-        fn="mean",
-    )[0]
+# def _grid_glider_data(glider, out, xaxis, yaxis):
+#     exclude_from_grid = [
+#         "AD2CP_ALT",
+#         "AD2CP_HEADING",
+#         "AD2CP_PITCH",
+#         "AD2CP_PRESSURE",
+#         "AD2CP_ROLL",
+#         "AROD_FT_DO",
+#         "AROD_FT_TEMP",
+#         "Altitude",
+#         "AngCmd",
+#         "AngPos",
+#         "BallastCmd",
+#         "BallastPos",
+#         "dead_reckoning",
+#         "declination",
+#         "Depth",
+#         "DesiredH",
+#         "LinCmd",
+#         "LinPos",
+#         "NAV_DEPTH",
+#         "NAV_LATITUDE",
+#         "NAV_LONGITUDE",
+#         "nav_resource",
+#         "NavState",
+#         "Pa",
+#         "Pitch",
+#         "Roll",
+#         "Heading",
+#         "SecurityLevel",
+#         "Temperature",
+#         "time",
+#         "Unnamed: 22",
+#         "Unnamed: 28",
+#         "Voltage",
+#         "missionNum",
+#         "Lat",
+#         "Lon",
+#     ]
 
-    out = _grid_glider_data(glider, out, xaxis, yaxis)
+#     variables = glider.columns
+#     variables = [x for x in variables if x not in exclude_from_grid]
 
-    return out
+#     def grid(name):
+#         return grid2d(
+#             glider.profile_number.values,
+#             glider.pressure.values,
+#             glider[name].values,
+#             xi=xaxis,
+#             yi=yaxis,
+#             fn="mean",
+#         )[0]
+
+#     for varname in variables:
+#         try:
+#             out[varname] = grid(varname)
+#         except IndexError:
+#             _log.info('Variable "' + varname + '" failed to grid.')
+
+#     return out
 
 
-def verify_depth_bias(out, yaxis, E="ADCP_E", N="ADCP_N"):
-    north = np.gradient(out["latitude"], axis=1) > 0
-    south = np.gradient(out["latitude"], axis=1) < 0
-    depths = np.linspace(0, np.max(yaxis) - 5, 20)
-    drange = np.mean(np.diff(depths)) / 2
-    bins = np.linspace(-1, 1, 100) * 0.5
+# def grid_data(ADCP, glider, out, xaxis, yaxis):
+#     ADCP_pnum = np.tile(ADCP.profile_number, (len(ADCP.gridded_bin), 1)).T
+#     out["Sh_E"] = grid2d(
+#         ADCP_pnum.flatten(),
+#         ADCP.bin_depth.values.flatten(),
+#         ADCP.Sh_E.values.flatten(),
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Sh_N"] = grid2d(
+#         ADCP_pnum.flatten(),
+#         ADCP.bin_depth.values.flatten(),
+#         ADCP.Sh_N.values.flatten(),
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Sh_U"] = grid2d(
+#         ADCP_pnum.flatten(),
+#         ADCP.bin_depth.values.flatten(),
+#         ADCP.Sh_U.values.flatten(),
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Heading"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Heading"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Pitch"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Pitch"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Roll"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Roll"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["latitude"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Latitude"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["longitude"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Longitude"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["profile_number"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["profile_number"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
+#     out["Pressure"] = grid2d(
+#         ADCP.profile_number.values,
+#         ADCP.Pressure.values,
+#         ADCP["Pressure"].values,
+#         xi=xaxis,
+#         yi=yaxis,
+#         fn="mean",
+#     )[0]
 
-    variables = [E, N]
+#     out = _grid_glider_data(glider, out, xaxis, yaxis)
 
-    for idx, var in enumerate(variables):
-
-        for d in depths:
-            depth = np.abs(out["Pressure"] - d) < drange
-
-            Nvals = out[var][(north & depth)]
-            Svals = out[var][(south & depth)]
-            N, _ = np.histogram(Nvals, bins=bins, density=True)
-            S, _ = np.histogram(Svals, bins=bins, density=True)
-
-            N[N == 0] = np.nan
-            S[S == 0] = np.nan
-    for d in depths:
-        depth = np.abs(out["Pressure"] - d) < drange
-
-        Nvals = np.sqrt(out["ADCP_E"] ** 2 + out["ADCP_N"] ** 2)[(north & depth)]
-        Svals = np.sqrt(out["ADCP_E"] ** 2 + out["ADCP_N"] ** 2)[(south & depth)]
-        N, _ = np.histogram(Nvals, bins=bins, density=True)
-        S, _ = np.histogram(Svals, bins=bins, density=True)
-
-        N[N == 0] = np.nan
-        S[S == 0] = np.nan
+#     return out
 
 
-def calc_bias(out, yaxis):
-    """
-    Corrects gridded horizontal velocities for vertical shear bias.
+# def verify_depth_bias(out, yaxis, E="ADCP_E", N="ADCP_N"):
+#     north = np.gradient(out["latitude"], axis=1) > 0
+#     south = np.gradient(out["latitude"], axis=1) < 0
+#     depths = np.linspace(0, np.max(yaxis) - 5, 20)
+#     drange = np.mean(np.diff(depths)) / 2
+#     bins = np.linspace(-1, 1, 100) * 0.5
 
-    :param out: xr.DataSet of gridded horizontal velocities
-    :param yaxis: depth bins of gridded velocity data
-    :param taxis: time of gridded velocity data
-    :param days: days to plot
-    :param options: options dict for processing
-    :return: xr.DataSet of gridded horizontal velocities corrected for shear bias
-    """
+#     variables = [E, N]
 
-    def get_bias(glider_speed, coeff):
-        r, c = np.shape(glider_speed)
-        bias = np.nancumsum(glider_speed, axis=0)
-        bias[~np.isfinite(glider_speed)] = np.nan
-        bias = bias - np.tile(np.nanmean(bias, axis=0), [r, 1])
-        return bias * coeff
+#     for idx, var in enumerate(variables):
 
-    def score(E, N):
-        def rmsd_h(x):
-            return np.sqrt(np.nanmean(x**2, axis=1))
+#         for d in depths:
+#             depth = np.abs(out["Pressure"] - d) < drange
 
-        def rmsd(x):
-            return np.sqrt(np.nanmean(x**2))
+#             Nvals = out[var][(north & depth)]
+#             Svals = out[var][(south & depth)]
+#             N, _ = np.histogram(Nvals, bins=bins, density=True)
+#             S, _ = np.histogram(Svals, bins=bins, density=True)
 
-        def y_weighting(x):
-            return x * 0 + 1
+#             N[N == 0] = np.nan
+#             S[S == 0] = np.nan
+#     for d in depths:
+#         depth = np.abs(out["Pressure"] - d) < drange
 
-        return rmsd((rmsd_h(E) + rmsd_h(N)) * y_weighting(yaxis)) * 1e6
+#         Nvals = np.sqrt(out["ADCP_E"] ** 2 + out["ADCP_N"] ** 2)[(north & depth)]
+#         Svals = np.sqrt(out["ADCP_E"] ** 2 + out["ADCP_N"] ** 2)[(south & depth)]
+#         N, _ = np.histogram(Nvals, bins=bins, density=True)
+#         S, _ = np.histogram(Svals, bins=bins, density=True)
 
-    def fn(coeff):
-        return score(
-            out["ADCP_E"] + get_bias(out["speed_e"], coeff),
-            out["ADCP_N"] + get_bias(out["speed_n"], coeff),
-        )
+#         N[N == 0] = np.nan
+#         S[S == 0] = np.nan
 
-    for _i in range(100):
-        R = fmin(
-            fn,
-            1,
-            maxiter=100,
-            ftol=0.00001,
-            disp=False,
-            retall=False,
-        )
-    _log.info(R)
-    coeff = R[0]
 
-    out["ADCP_E"] = out["ADCP_E"] + get_bias(out["speed_e"], coeff)
-    out["ADCP_N"] = out["ADCP_N"] + get_bias(out["speed_n"], coeff)
-    return out
+# def calc_bias(out, yaxis):
+#     """
+#     Corrects gridded horizontal velocities for vertical shear bias.
+
+#     :param out: xr.DataSet of gridded horizontal velocities
+#     :param yaxis: depth bins of gridded velocity data
+#     :param taxis: time of gridded velocity data
+#     :param days: days to plot
+#     :param options: options dict for processing
+#     :return: xr.DataSet of gridded horizontal velocities corrected for shear bias
+#     """
+
+#     def get_bias(glider_speed, coeff):
+#         r, c = np.shape(glider_speed)
+#         bias = np.nancumsum(glider_speed, axis=0)
+#         bias[~np.isfinite(glider_speed)] = np.nan
+#         bias = bias - np.tile(np.nanmean(bias, axis=0), [r, 1])
+#         return bias * coeff
+
+#     def score(E, N):
+#         def rmsd_h(x):
+#             return np.sqrt(np.nanmean(x**2, axis=1))
+
+#         def rmsd(x):
+#             return np.sqrt(np.nanmean(x**2))
+
+#         def y_weighting(x):
+#             return x * 0 + 1
+
+#         return rmsd((rmsd_h(E) + rmsd_h(N)) * y_weighting(yaxis)) * 1e6
+
+#     def fn(coeff):
+#         return score(
+#             out["ADCP_E"] + get_bias(out["speed_e"], coeff),
+#             out["ADCP_N"] + get_bias(out["speed_n"], coeff),
+#         )
+
+#     for _i in range(100):
+#         R = fmin(
+#             fn,
+#             1,
+#             maxiter=100,
+#             ftol=0.00001,
+#             disp=False,
+#             retall=False,
+#         )
+#     _log.info(R)
+#     coeff = R[0]
+
+#     out["ADCP_E"] = out["ADCP_E"] + get_bias(out["speed_e"], coeff)
+#     out["ADCP_N"] = out["ADCP_N"] + get_bias(out["speed_n"], coeff)
+#     return out
 
 
 def make_dataset(out):
@@ -1703,36 +1703,36 @@ def shear_from_adcp(adcp_file_path, glider_file_path, options=None):
     ADCP = correct_heading(ADCP, data, options)
     ADCP = soundspeed_correction(ADCP)
     ADCP = remove_outliers(ADCP, options)
-    ADCP = correct_shear(ADCP, options)
-    ADCP = correct_backscatter(ADCP, data)
+    # ADCP = correct_shear(ADCP, options)
+    # ADCP = correct_backscatter(ADCP, data)
     ADCP = regridADCPdata(ADCP, options)
     ADCP = calcXYZfrom3beam(ADCP, options)
     ADCP = calcENUfromXYZ(ADCP, options)
     return ADCP, data
 
 
-def grid_shear(ADCP, data):
-    xaxis, yaxis, taxis, days = grid_shear_data(data)
-    out = grid_data(ADCP, data, {}, xaxis, yaxis)
-    ds = make_dataset(out)
-    return ds
+# def grid_shear(ADCP, data):
+#     xaxis, yaxis, taxis, days = grid_shear_data(data)
+#     out = grid_data(ADCP, data, {}, xaxis, yaxis)
+#     ds = make_dataset(out)
+#     return ds
 
 
-def velocity_from_shear(adcp_file_path, glider_file_path, ADCP, data, options=None):
-    if not options:
-        options = default_options
-    extra_data = pd.read_parquet(glider_file_path)
-    extra_data.index = data.index
-    data["speed_vert"] = extra_data["speed_vert"]
-    data["speed_horz"] = extra_data["speed_horz"]
-    data["dead_reckoning"] = extra_data["dead_reckoning"]
-    data["nav_resource"] = extra_data["nav_resource"]
-    data["dive_number"] = extra_data["dive_number"]
-    xaxis, yaxis, taxis, days = grid_shear_data(data)
-    data = get_DAC(ADCP, data)
-    ADCP = bottom_track(ADCP, adcp_file_path, options)
-    out = reference_shear(ADCP, data, xaxis, yaxis)
-    out = grid_data(ADCP, data, out, xaxis, yaxis)
-    out = calc_bias(out, yaxis)
-    ds = make_dataset(out)
-    return ds
+# def velocity_from_shear(adcp_file_path, glider_file_path, ADCP, data, options=None):
+#     if not options:
+#         options = default_options
+#     extra_data = pd.read_parquet(glider_file_path)
+#     extra_data.index = data.index
+#     data["speed_vert"] = extra_data["speed_vert"]
+#     data["speed_horz"] = extra_data["speed_horz"]
+#     data["dead_reckoning"] = extra_data["dead_reckoning"]
+#     data["nav_resource"] = extra_data["nav_resource"]
+#     data["dive_number"] = extra_data["dive_number"]
+#     xaxis, yaxis, taxis, days = grid_shear_data(data)
+#     data = get_DAC(ADCP, data)
+#     ADCP = bottom_track(ADCP, adcp_file_path, options)
+#     out = reference_shear(ADCP, data, xaxis, yaxis)
+#     out = grid_data(ADCP, data, out, xaxis, yaxis)
+#     out = calc_bias(out, yaxis)
+#     ds = make_dataset(out)
+#     return ds
