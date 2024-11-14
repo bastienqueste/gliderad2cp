@@ -11,103 +11,6 @@ warnings.filterwarnings(action="ignore", message="invalid value encountered in d
 warnings.filterwarnings(action="ignore", message="invalid value encountered in true_divide")
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
 
-
-# def reference_shear(ADCP, glider, dE, dN, dT, xaxis, yaxis, taxis, options):
-#     """
-#     Reference the estimates of vertical shear of horizontal velocity using a per-profile average velocity
-
-#     :param ADCP: xr.DataSet of ADCP data
-#     :param options: options dictionary
-#     :param dE: eastward surface drift velocity
-#     :param dN: northward surface drift velocity
-#     :param dT: timestamps surface drift velocity
-#     :param xaxis: profile numbers of gridded velocity data
-#     :param yaxis: depth bins of gridded velocity data
-#     :param taxis: time of gridded velocity data
-#     :param options: options dict for processing
-#     :return:  xr.DataSet of referenced gridded N and E velocities
-#     """
-#     out = {}
-
-#     var = ["E", "N"]
-#     if options["debug_plots"]:
-#         plt.figure(figsize=(20, 20))
-
-#     days = np.unique(glider.time.round("D"))
-#     for pstep in range(len(var)):
-#         letter = var[pstep]
-#         # Grid shear to average out sensor + zooplankton noise
-#         Sh, XI, YI = grid2d(
-#             np.tile(ADCP.profile_number.values, (len(ADCP.gridded_bin), 1)).T.flatten(),
-#             ADCP.bin_depth.values.flatten(),
-#             ADCP["Sh_" + letter].values.flatten(),
-#             xi=xaxis,
-#             yi=yaxis,
-#             fn="mean",
-#         )
-
-#         # Integrate shear vertically
-#         _bd = ~np.isfinite(
-#             Sh
-#         )  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
-#         Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
-#         V = (
-#             np.cumsum(Sh, axis=0) * y_res
-#         )  # Cumulative sum of shear to recover velocity profile
-#         V[_bd] = np.nan  # Return NaNs to their rightful place.
-#         V = V - np.tile(
-#             np.nanmean(V, axis=0), (np.shape(V)[0], 1)
-#         )  # Make mean of baroclinic profiles equal to 0
-
-#         # Grid DAC
-#         DAC, XI, YI = grid2d(
-#             glider.profile_number.values,
-#             glider.pressure.values,
-#             glider["DAC_" + letter].values,
-#             xi=xaxis,
-#             yi=yaxis,
-#             fn="mean",
-#         )
-
-#         # Grid vertical speed
-#         dPdz, XI, YI = grid2d(
-#             glider.profile_number.values,
-#             glider.pressure.values,
-#             glider["speed_vert"].values,
-#             xi=xaxis,
-#             yi=yaxis,
-#             fn="mean",
-#         )
-
-#         # Grid salinity
-#         SA, XI, YI = grid2d(
-#             glider.profile_number.values,
-#             glider.pressure.values,
-#             glider.salinity.values,
-#             xi=xaxis,
-#             yi=yaxis,
-#             fn="median",
-#         )
-
-#         # Seconds spent in each depth bin, to weight referencing
-#         SpB = y_res / dPdz
-#         SpB[np.isinf(SpB)] = 0
-#         strictness = 1
-#         SpB_std = np.nanstd(SpB.flatten())
-#         SpB[np.abs(SpB) > (strictness * SpB_std)] = strictness * SpB_std
-
-#         # Baroclinic velocity, weighted by depth residence time, should be equal to DAC
-#         # So the reference to add to a baroclinic profile of mean = 0 is the DAC - the weighted baroclinic velocity.
-#         Ref = np.nanmean(DAC, axis=0) - np.nansum(V * SpB, axis=0) / np.nansum(
-#             SpB, axis=0
-#         )
-
-#         # Now we reference the velocity
-#         V = V + np.tile(Ref, (np.shape(V)[0], 1))
-   
-
-
-
 # def verify_depth_bias(out, yaxis, options, E="ADCP_E", N="ADCP_N"):
 #     north = np.gradient(out["latitude"], axis=1) > 0
 #     south = np.gradient(out["latitude"], axis=1) < 0
@@ -407,15 +310,45 @@ def interp(x, y, xi):
 Processing functions
 '''
 def get_DAC(ADCP, gps_predive, gps_postdive):
+    """
+    Calculate dive-averaged currents using the ADCP as a DVL.
+
+    ...
+
+    Inputs
+    ----------
+    ADCP : xarray.Dataframe
+        Output from the gliderAD2CP.process_shear() function.
+    gps_predive : numpy.array
+        Mx3 numpy array where M in the number of dives performed by the glider.
+        Columns are np.datetime64[ns], longitude and latitude.
+    gps_postdive : numpy.array
+        Mx3 numpy array where M in the number of dives performed by the glider. 
+        Columns are np.datetime64[ns], longitude and latitude.
+         
+    Outputs
+    -------
+    dac
+        Mx2 np.array containing eastward DAC (column 0) and northward DAC (column 1), for M dives identified.
+    dive_time
+        Mx1 np.array containing mean time for the dive in np.datetime64[ns] format.
+    dive_duration
+        Mx1 np.array containing mean duration for the dive in seconds.
+    dxy_gps, dxy_dvl
+        Mx2 np.arrays containing eastward (col 0) and northward (col 1) displacement in m,
+        calculated from GPS and from ADCP as a DVL respectively.
     
+    """
     ## Process time data
-    time = ADCP.time.values.astype("float") * 1e-9
-    deltat = np.append(np.diff(ADCP["time"].values.astype("float") / 1e9), np.nan)
+    time = ADCP.time.values.astype("float") / 1e9
+    deltat = np.append(np.diff(time), np.nan)
     f = np.nanmedian(deltat)
     deltat[deltat > f*10] = np.NaN
     deltat = np.nan_to_num(deltat)
     
     ## Create interpolannt to query DVL travel at time t.
+    
+    #Using the 3-beam configuration:
     travel_e = interp1d(
             time,
             np.cumsum(np.nan_to_num(-(ADCP["E"].mean(dim="gridded_bin") * deltat).values)),
@@ -427,6 +360,25 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
             bounds_error=False, fill_value=np.nan
             )
     
+    # # Using the 4-beam configuration:
+    # spd_thr_water = np.sqrt(ADCP["X4"] ** 2 + ADCP["Y4"] ** 2 + ADCP["ZZ4"] ** 2).mean("bin")
+    # hspd = np.cos(np.deg2rad(np.abs(ADCP["Pitch"]) + 5)) * spd_thr_water
+    # angle = np.deg2rad(90 - ADCP["Heading"])
+    # e = hspd * np.cos(angle)
+    # n = hspd * np.sin(angle)
+    # e = np.nan_to_num(e) * deltat
+    # n = np.nan_to_num(n) * deltat
+    # travel_e = interp1d(
+    #         time,
+    #         np.cumsum(np.nan_to_num(e) * deltat),
+    #         bounds_error=False, fill_value=np.nan
+    #         )
+    # travel_n = interp1d(
+    #         time,
+    #         np.cumsum(np.nan_to_num(e) * deltat),
+    #         bounds_error=False, fill_value=np.nan
+    #         )
+    
     r,c = np.shape(gps_predive)
     
     dive_time = np.full(r, np.NaN) # Duration in seconds
@@ -436,9 +388,8 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     dxy_gps =  np.full([r,2], np.NaN) # x/y displacement in m, over earth, for the dive calculated from GPS coordinates
     dxy_dvl =  np.full([r,2], np.NaN) # x/y displacement in m, through water, for the dive calculated from ADCP as DVL
     
-    pre_t  = gps_predive[:,0].astype('float') * 1e-9
-    post_t = gps_postdive[:,0].astype('float') * 1e-9
-    
+    pre_t  = gps_predive[:,0].astype('float') / 1e9 # s
+    post_t = gps_postdive[:,0].astype('float') / 1e9 # s
     
     def lon2m(x, y):
         return gsw.distance([x-0.0005, x + 0.0005], [y, y])*1000
@@ -446,7 +397,7 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
         return gsw.distance([x, x], [y-0.0005, y+0.0005])*1000
     
     for idx in range(len(gps_predive)):
-        dt = post_t - pre_t[idx]
+        dt = post_t - pre_t[idx] # s
         dt[dt < 0] = np.NaN
         
         if all(np.isnan(dt)):
@@ -454,7 +405,7 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
             continue
         
         idy = np.nanargmin(dt)
-        dive_duration[idx] = dt[idy] / 1e9
+        dive_duration[idx] = dt[idy] # s
         dive_time[idx] = (post_t[idy]+pre_t[idx])/2
         
         dxy_dvl[idx,0] = travel_e(post_t[idy]) - travel_e(pre_t[idx])
@@ -464,43 +415,87 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
         dxy_gps[idx,1] = (gps_postdive[idy,2] - gps_predive[idx,2]) * lat2m(gps_predive[idx,1],gps_predive[idx,2])
     
     dac = (dxy_gps - dxy_dvl) / np.vstack([dive_duration,dive_duration]).T
-    dive_time = pd.to_datetime(dive_time*1e9)
+    dive_time = pd.to_datetime(dive_time*1e9).values
     
     return dac, dive_time, dive_duration, dxy_gps, dxy_dvl
 
 def grid_shear(ADCP, xi, yi):
-    currents = xr.Dataset(coords={"profile_index": xi, "depth": yi})
+    """
+    Grid shear according to specifications.
+
+    ...
+
+    Inputs
+    ----------
+    ADCP : xarray.Dataframe
+        Output from the gliderAD2CP.process_shear() function.
+    xi : numpy.array
+        Array indicating bins in x-axis.
+    yi : numpy.array
+        Array indicating bins in y-axis.
+         
+    Outputs
+    -------
+    currents : xr.Dataset
+        Dataset containing gridded shear and various statistical metrics, as well as time spent per bin by the glider.    
+        
+    """
     
+    print(f'Creating output structure and time-based metrics...')
+    
+    # Create structure
+    currents = xr.Dataset(coords={"depth": yi, "profile_index": xi})
+    
+    # Get coords for gridding function below in the right dimensions
     x, y = xr.broadcast(ADCP.profile_number, ADCP.bin_depth)
     t, _ = xr.broadcast(ADCP.time, ADCP.bin_depth)
     x = x.values.flatten()
     y = y.values.flatten()
     t = t.values.astype('float').flatten()
-    
-    grid = lambda var_name, fn_name : grid2d(x, y, ADCP[var_name].values.flatten(), xi=xi, yi=yi, fn=fn_name)[0].T
-    count_valid = lambda x : np.count_nonzero(np.isfinite(x))
-    
-    time = np.nanmean(grid2d(x, y, t, xi=xi, yi=yi, fn=np.nanmean)[0], axis=0)
+
+    # Create time coordinates
+    time = np.nanmedian(grid2d(x, y, t, xi=xi, yi=yi, fn=np.nanmedian)[0], axis=0)
     currents = currents.assign_coords(time=("profile_index", pd.to_datetime(time)))
     
-    
-    abs_vert_spd, _, YI = grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
-                                 np.abs(np.gradient(ADCP['Depth'].values,ADCP.time.values.astype('float')/1e9)), xi=xi, yi=yi, fn=np.nanmean)
-    
-    currents['time_in_bin'] = (('profile_index', 'depth'),  np.gradient(YI, axis=0).T / abs_vert_spd.T)
-    
+    # Calculate time in bin
+    # This metric is important when referencing to DAC later.
+    # We weight the baroclinic velocity by time spent in each bin when referencing to DAC.
+    # This is relevant on loiter dives for example, where we may spend 24 hours loitering 
+    # and as a result the DAC is heavily biased to the velocity at the loiter depth.
+    # Calculating time in each bin is very easy (differentiate sampling frequency and sum in bins)
+    # ... this works great to calculate loiters etc.... 
+    # ... BUT we have very long periods at the surface which are NOT included in the DAC.
+    # Here we set durations to 0 when dP/dt is under a threshold near the surface.
+    # It's not perfect, but it's fairly cross-compatible assumption.    
+    duration = np.gradient(ADCP.time.values.astype('float'))/1e9 # Time spent at that depth
+    # Set surface values to 0. Imperfect because pressure sensor drift but captures a good amout. We lose some good data but very minimal.
+    duration[ADCP.Depth.values < 1] = 0 
+    # Same with a looser depth threshold but only if speeds are less than 4cm/s.
+    duration[
+        (ADCP.Depth.values < 3) & (np.abs(np.gradient(ADCP.Depth.values, ADCP.time.values.astype('float')/1e9)) < 0.04)
+         ] = 0
+    currents['time_in_bin'] = (('depth', 'profile_index'),
+                               grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
+                                 duration,
+                                 xi=xi, yi=yi, fn=np.nansum)[0]
+                              )
+
+    # Gridding function for shear
+    grid = lambda var_name, fn_name : grid2d(x, y, ADCP[var_name].values.flatten(), xi=xi, yi=yi, fn=fn_name)[0]
+    count_valid = lambda x : np.count_nonzero(np.isfinite(x))
+    # Grid shear data and metrics
     print(f'Gridding eastward shear metrics...')
-    currents['shear_E_mean'] = (('profile_index', 'depth'),   grid('Sh_E', np.nanmean))
-    currents['shear_E_median'] = (('profile_index', 'depth'), grid('Sh_E', np.nanmedian))
-    currents['shear_E_stddev'] = (('profile_index', 'depth'), grid('Sh_E', np.nanstd))
-    currents['shear_E_count'] = (('profile_index', 'depth'),  grid('Sh_E', count_valid))
-    
+    currents['shear_E_mean'] = (('depth', 'profile_index'),   grid('Sh_E', np.nanmean))
+    currents['shear_E_median'] = (('depth', 'profile_index'), grid('Sh_E', np.nanmedian))
+    currents['shear_E_stddev'] = (('depth', 'profile_index'), grid('Sh_E', np.nanstd))
+    currents['shear_E_count'] = (('depth', 'profile_index'),  grid('Sh_E', count_valid))
+
     print(f'Gridding northward shear metrics...')
-    currents['shear_N_mean'] = (('profile_index', 'depth'),   grid('Sh_N', np.nanmean))
-    currents['shear_N_median'] = (('profile_index', 'depth'), grid('Sh_N', np.nanmedian))
-    currents['shear_N_stddev'] = (('profile_index', 'depth'), grid('Sh_N', np.nanstd))
-    currents['shear_N_count'] = (('profile_index', 'depth'),  grid('Sh_N', count_valid))
-    
+    currents['shear_N_mean'] = (('depth', 'profile_index'),   grid('Sh_N', np.nanmean))
+    currents['shear_N_median'] = (('depth', 'profile_index'), grid('Sh_N', np.nanmedian))
+    currents['shear_N_stddev'] = (('depth', 'profile_index'), grid('Sh_N', np.nanstd))
+    currents['shear_N_count'] = (('depth', 'profile_index'),  grid('Sh_N', count_valid))
+
     print(f'Calculating standard error as percentage of shear...')
     currents['shear_E_pct_error'] = np.abs(
         100 * 
@@ -508,7 +503,7 @@ def grid_shear(ADCP, xi, yi):
         np.sqrt(currents.shear_E_count)
         / currents.shear_E_mean
     )
-    
+
     currents['shear_N_pct_error'] = np.abs(
         100 * 
         currents.shear_N_stddev / 
@@ -518,20 +513,44 @@ def grid_shear(ADCP, xi, yi):
 
     return currents
 
-def grid_velocity(currents, method='integrate'):        
+def grid_velocity(currents, method='integrate'):
+    """
+    Assemble shear measurements to reconstruct velocity profiles.
+    Currently only able to integrate in the vertical, but I have aspirations to add the least-squared method too.
+    Untested and likely not compatible with irregular grids.
+
+    ...
+
+    Inputs
+    ----------
+    currents : xr.Dataset
+        Dataset containing gridded shear produced by the process_currents.grid_shear() function.
+    method : str, default = 'integrate'
+        Which method to use to reconstruct velocity profiles. Currently only "integrate" is available.
+        "lsq" coming one day. maybe.
+        
+         
+    Outputs
+    -------
+    currents : xr.Dataset
+        Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, and unreferenced velocity profiles.
+        
+    """
     def integrate():
         def integrate_calc(Sh):
             # Integrate shear vertically
             _bd = ~np.isfinite(Sh)  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
             Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
-            V = ( np.cumsum(Sh, axis=1) * np.gradient(currents.depth.values) )  # Cumulative sum of shear to recover velocity profile
+            y_res = np.gradient(currents.depth.values)
+            y_res = np.broadcast_to(y_res[:,np.newaxis],Sh.shape)
+            V = np.cumsum(Sh * y_res, axis=0)  # Cumulative sum of shear to recover velocity profile
             V[_bd] = np.nan  # Return NaNs to their rightful place.
             V = V - np.tile(
-                np.nanmean(V, axis=1), (np.shape(V)[1], 1)
-            ).T  # Make mean of baroclinic profiles equal to 0
+                np.nanmean(V, axis=0), (np.shape(V)[0], 1)
+            )  # Make mean of baroclinic profiles equal to 0
             return V        
-        currents['velocity_E_no_reference'] = (("profile_index", "depth"), integrate_calc(currents.shear_E_median.values))
-        currents['velocity_N_no_reference'] = (("profile_index", "depth"), integrate_calc(currents.shear_N_median.values))
+        currents['velocity_E_no_reference'] = (('depth', 'profile_index'), integrate_calc(currents.shear_E_median.values))
+        currents['velocity_N_no_reference'] = (('depth', 'profile_index'), integrate_calc(currents.shear_N_median.values))
      
     def lsq():
         # Space for Martin Visbeck's least squared method
@@ -547,13 +566,60 @@ def grid_velocity(currents, method='integrate'):
     
     return currents
 
+def reference_velocity(currents, DAC, dive_time):
+    """
+    Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    This ensures that dives with irregular vertical speeds or periods of loitering at depth are still reproduced correctly.
+    As a result, one cannot expect the *depth*-averaged velocity of a dive to match the *dive*-averaged currents.
+
+    ...
+
+    Inputs
+    ----------
+    currents : xr.Dataset
+        Dataset containing gridded shear produced by the process_currents.grid_shear() function.
+    DAC
+        Mx2 np.array containing eastward DAC (column 0) and northward DAC (column 1), for M dives identified.
+    dive_time
+        Mx1 np.array containing mean time for the dive in np.datetime64[ns] format.
+        
+         
+    Outputs
+    -------
+    currents : xr.Dataset
+        Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, and unreferenced velocity profiles.
+        
+    """
+    
+    # DAC = \int_{0}^{z} \frac{velocity * time spent in bin}{time spent in profile} + referencing
+    # DAC - \int_{0}^{z} \frac{velocity * time spent in bin}{time spent in profile} = referencing
+    time_in_bin, depth = xr.broadcast(currents.time_in_bin, currents.depth)
+    time_in_bin = time_in_bin.values
+    depth = depth.values
+    time_in_bin_mean = np.nanmean(time_in_bin, axis=0)
+    
+    
+    for DAC_idx, direction in enumerate(['E','N']):
+        currents[f'DAC_{direction}'] = ('profile_index', interp(dive_time.astype('float'), DAC[:,DAC_idx], currents.time.values.astype('float')))
+        
+        velocity = currents[f'velocity_{direction}_no_reference'].values * time_in_bin / np.broadcast_to(time_in_bin_mean[np.newaxis,:],time_in_bin.shape)
+                
+        reference = currents[f'DAC_{direction}'].values - np.nanmean(velocity, axis=0)
+        
+        currents[f'reference_{direction}_from_DAC'] = ('profile_index', reference)
+        
+        currents[f'velocity_{direction}_DAC_reference'] = currents[f'velocity_{direction}_no_reference'] + currents[f'reference_{direction}_from_DAC']
+        
+    return currents
+
 '''
 Main
 '''
 def process(ADCP, gps_predive, gps_postdive, xi=1, yi=None, correct_shear_bias=True):
     """
     Calculate depth-resolved currents from shear data calculated by the gliderAD2CP.process_shear() function.
-
+    This functionality can handle loiter dives and irregular profiles but it requires that your ADCP is 
+    always on so that DAC is representative of the baroclinic profile collected by the ADCP.
     ...
 
     Inputs
@@ -577,33 +643,42 @@ def process(ADCP, gps_predive, gps_postdive, xi=1, yi=None, correct_shear_bias=T
         If None, the ADCP sampling cell size is provided as yi.
     correct_shear_bias : Bool, default=True
         Correct for shear bias using an elaboration on Todd et al. (2017)'s approach.
+        
+        
+    Outputs
+    -------
+    currents : xr.Dataset
+        Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, unreferenced velocity profiles and DAC-referenced velocities.
 
-    __main__ runs the following methods in this order
+
+    .process() runs the following methods in this order
     -------
     1. get_DAC
     2. grid_shear
     3. grid_velocity
     4. reference_velocity
     
-    Optional steps:
-    5. assess_shear_bias
-    6. correct_shear_bias
+    (Optional steps:) - Not coded up yet
+    (5. assess_shear_bias) - Not coded up yet
+    (6. correct_shear_bias) - Not coded up yet.
     
     
     Methods
     -------
     grid2d
-        Prints the person's name and age.
-    plot_subsurface_movement
-        Prints the person's name and age.
+        Quick data binning function relying on pandas.
+    interp
+        Interpolation shortcut that removes NaN data and ignores boundary errors.
     get_DAC
-        Prints the person's name and age.
+        Calculate dive-averaged currents using the ADCP as a DVL.
     grid_shear
-        Prints the person's name and age.
-    integrate_shear
-    reference_shear
-    assess_shear_bias
-    
+        Grid shear according to specifications.
+    grid_velocity
+        Assemble shear measurements to reconstruct velocity profiles.
+    reference_velocity
+        Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    process
+        This function.    
     """
     
     if yi is None:
@@ -617,10 +692,7 @@ def process(ADCP, gps_predive, gps_postdive, xi=1, yi=None, correct_shear_bias=T
     DAC, dive_time, _, _, _ = get_DAC(ADCP, gps_predive, gps_postdive)
     
     currents = grid_shear(ADCP, xi, yi)
-    
     currents = grid_velocity(currents)
+    currents = reference_velocity(currents,DAC,dive_time)
     
-#     currents = reference_shear(currents,DAC)
-    
-    
-    return currents, DAC, dive_time
+    return currents
