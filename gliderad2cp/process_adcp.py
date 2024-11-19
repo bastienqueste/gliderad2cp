@@ -103,6 +103,7 @@ def load(glider_file):
         "profile_number",
         "declination",
         "pressure",
+        "dive_number"
     ]
     data = data[sel_cols]
     time_ms = data.time.values
