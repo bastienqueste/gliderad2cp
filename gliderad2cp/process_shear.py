@@ -104,6 +104,8 @@ def load_data(adcp_file_path, glider_file_path, options):
             pd.Dataframe of the input glider data. Serves no real purpose but may be helpful in debugging. Discarded when called from .process()
 
         """
+        if type(glider_file) is pd.core.frame.DataFrame:
+            data = glider_file
         if type(glider_file) is xr.core.dataset.Dataset:
             data = glider_file.to_dataframe()
             if 'time' not in data:

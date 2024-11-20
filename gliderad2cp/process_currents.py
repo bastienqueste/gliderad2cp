@@ -341,6 +341,91 @@ def _reference_velocity(currents, DAC):
 
     return currents
 
+def assess_shear_bias(currents):
+    from scipy import stats
+    from scipy.stats import t
+    import matplotlib.pyplot as plt
+
+    def fit(x,y,c=None,mask=True):
+        _gd = np.isfinite(x+y) & (np.abs(x) > 200) & mask
+        x = x[_gd]
+        y = y[_gd]
+        res = stats.linregress(x, y)
+        if c is None:
+            plt.plot(x, y, '.', label='original data')
+        else:
+            plt.scatter(x,y,5,c[_gd])
+            plt.colorbar()
+        plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+
+        # Two-sided inverse Students t-distribution
+        # p - probability, df - degrees of freedom
+        tinv = lambda p, df: abs(t.ppf(p/2, df))
+        ts = tinv(0.05, len(x)-2)
+
+        plt.plot(x, res.intercept + (res.slope+ts*res.stderr)*x - (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
+        plt.plot(x, res.intercept + (res.slope+ts*res.stderr)*x + (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
+        plt.plot(x, res.intercept + (res.slope-ts*res.stderr)*x - (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
+        plt.plot(x, res.intercept + (res.slope-ts*res.stderr)*x + (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
+        plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+        color = 'lightgrey'
+        if np.abs(3*ts*res.stderr) < np.abs(res.slope):
+            color = 'orange'
+        if np.abs(5*ts*res.stderr) < np.abs(res.slope):
+            color = 'red'
+        plt.xlabel(f'Displacement {l1}')
+        plt.ylabel(f'Shear {l2}')
+        #print(f"slope (95%): {res.slope:.2E} +/- {ts*res.stderr:.2E}")
+        plt.title(f"R² = {res.rvalue**2:.2f}\nslope (95%): {res.slope:.2E} +/- {ts*res.stderr:.2E}", color=color)
+        #print(f"intercept (95%): {res.intercept:.2E}", f" +/- {ts*res.intercept_stderr:.2E}")
+    
+    plt.figure(figsize=(12,10))
+    directions = ['N','E']
+    idx = 0
+    for l1 in directions:
+        for l2 in directions:
+            idx += 1
+            plt.subplot(2,2,idx)
+            fit(
+                currents[f'displacement_though_water_{l1}'].values, 
+                currents[f'shear_{l2}_mean'].mean(dim='depth', skipna=True),
+                c=currents['time_in_bin'].sum(dim='depth', skipna=True),
+                mask=(np.abs(currents[f'shear_{l2}_mean'].sel(depth=slice(500,1000)).sum(dim='depth', skipna=True)) > 0)
+            )
+    plt.tight_layout()
+    
+    plt.figure(figsize=(10,6))
+
+    plt.subplot(131)
+    plt.plot(currents.shear_E_mean.mean(dim='profile_index'), currents.depth, label='ShE mean')
+    plt.plot(currents.shear_N_mean.mean(dim='profile_index'), currents.depth, label='ShN mean')
+    plt.legend()
+    plt.xlabel('Mean Shear')
+    plt.ylabel('Depth')
+    plt.xlim([-0.002,0.002])
+    plt.axvline(0, color='k', alpha=0.3)
+    plt.gca().invert_yaxis()
+
+    plt.subplot(132)
+    plt.plot(currents.velocity_E_DAC_reference.mean(dim='profile_index'), currents.depth, label='E mean')
+    plt.plot(currents.velocity_N_DAC_reference.mean(dim='profile_index'), currents.depth, label='N mean')
+    plt.legend()
+    plt.xlabel('Mean Velocity')
+    plt.ylabel('Depth')
+    plt.axvline(0, color='k', alpha=0.3)
+    plt.gca().invert_yaxis()
+
+    plt.subplot(133)
+    plt.plot(currents.velocity_E_DAC_reference.var(dim='profile_index'), currents.depth, label='E variance')
+    plt.plot(currents.velocity_N_DAC_reference.var(dim='profile_index'), currents.depth, label='N variance')
+    plt.legend()
+    plt.xlabel('Velocity Variance')
+    plt.ylabel('Depth')
+    plt.gca().invert_yaxis()
+
+    plt.tight_layout()
+
+
 """
 Main
 """
@@ -388,8 +473,8 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
         options = get_options(verbose=False)
         plog('Using default set of options. See gliderad2cp.tools.get_options() for settings.')
     
-    xi = options['x-axis']
-    yi = options['y-axis']
+    xi = options['xaxis']
+    yi = options['yaxis']
     
     if yi is None:
         yi = ADCP.attrs['avg_cellSize'].astype('float')
@@ -405,5 +490,8 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
     currents = _grid_shear(ADCP, xi, yi)
     currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
     currents = _reference_velocity(currents,DAC)
+    
+    assess_shear_bias(currents)
+    #correct_shear_bias
     
     return currents

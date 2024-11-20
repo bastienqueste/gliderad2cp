@@ -19,9 +19,9 @@ def get_options(verbose=True, **kwargs):
         'QC_correlation_threshold' : [75, 'minimum acceptable along-beam correlation value.'],
         'QC_amplitude_threshold' : [75, 'maximum acceptable along-beam amplitude.'],
         'QC_velocity_threshold' : [1, 'maximum acceptable along-beam velocity in m.s-1.'],
-        'velocity_regridding_distance_from_glider' : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. This should be negative for bottom-mounted ADCPs.'],
-        'x-axis' : [1, 'If int, then the x-axis resolution in number of profiles of the final gridded products. Can also be an array indicating x-axis bins if an irregular x-axis is desired.'],
-        'y-axis' : [None, 'If None, then set to ADCP cell size. If int, then the y-axis resolution in metres of the final gridded products. Can also be an array indicating y-axis bins if an irregular y-axis is desired.'],
+        'velocity_regridding_distance_from_glider' : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.'],
+        'xaxis' : [1, 'x-axis resolution in number of profiles of the final gridded products.'],
+        'yaxis' : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.'],
         'debug_figures' : [False, 'Path where debugging and analysis figures should be saved.']
     }
         
