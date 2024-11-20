@@ -390,7 +390,7 @@ def assess_shear_bias(currents):
                 currents[f'displacement_though_water_{l1}'].values, 
                 currents[f'shear_{l2}_mean'].mean(dim='depth', skipna=True),
                 c=currents['time_in_bin'].sum(dim='depth', skipna=True),
-                mask=(np.abs(currents[f'shear_{l2}_mean'].sel(depth=slice(500,1000)).sum(dim='depth', skipna=True)) > 0)
+                mask=True # (np.abs(currents[f'shear_{l2}_mean'].sel(depth=slice(500,1000)).sum(dim='depth', skipna=True)) > 0)
             )
     plt.tight_layout()
     
