@@ -28,9 +28,10 @@ __linear_regression
     
 .process() runs the following functions in this order
 -------
-1. regress_bias
-2. correct_bias
-3. visualise
+1. visualise
+2. regress_bias
+3. correct_bias
+4. visualise
 
 """
 
@@ -67,7 +68,7 @@ def _linear_regression(x,y,options,c=None,mask=True,plot=False):
         Returns the slope of the linear regression
     
     """
-    _gd = np.isfinite(x+y) & mask
+    _gd = np.isfinite(x+y) & mask & (np.abs(y) < 0.01) & (np.abs(x) > 100)
     x = np.reshape(x[_gd],[-1,1])
     y = np.reshape(y[_gd],[-1,1])
     
@@ -135,7 +136,7 @@ def _linear_regression(x,y,options,c=None,mask=True,plot=False):
     return slope
 
 
-def visualise(currents, options):
+def visualise(currents, options, plot_all=True):
     """
     Produce collection of plots used to estimate shear bias.
 
@@ -157,81 +158,76 @@ def visualise(currents, options):
     if 'velocity_E_DAC_reference_sb_corrected' in currents: # Assume N also present
         corr_present = True
     
+    upper,lower = options['shear_bias_regression_depth_slice']
     # Plot linear regression of shear versus displacement
-    plt.figure(figsize=(10,8))
+    plt.figure(figsize=(10,20))
     directions = ['N','E']
     idx = 0
     for l1 in directions:
         for l2 in directions:
             idx += 1
-            plt.subplot(2,2,idx)
+            plt.subplot(4,2,idx)
             if corr_present:
                 _linear_regression(
                     currents[f'displacement_though_water_{l1}'].values, 
-                    (currents[f'velocity_{l2}_DAC_reference_sb_corrected']).differentiate('depth').mean(dim='depth', skipna=True).values,
+                    (currents[f'velocity_{l2}_DAC_reference_sb_corrected']).sel(depth=slice(upper,lower)).differentiate('depth').mean(dim='depth', skipna=True).values,
                     options,
-                    c=None,
-                    mask=np.abs(currents[f'displacement_though_water_{l1}'].values) > 100,
                     plot=True
                 )
             else:
                 _linear_regression(
                     currents[f'displacement_though_water_{l1}'].values, 
-                    currents[f'shear_{l2}_mean'].mean(dim='depth', skipna=True).values,
+                    (currents[f'velocity_{l2}_no_reference']).sel(depth=slice(upper,lower)).differentiate('depth').mean(dim='depth', skipna=True).values,
                     options,
-                    c=None,
-                    mask=np.abs(currents[f'displacement_though_water_{l1}'].values) > 100,
                     plot=True
                 )
             plt.xlabel(f'Displacement {l1} per profile')
             plt.ylabel(f'Mean shear {l2} per profile')
-    plt.tight_layout()
-    plt.draw()
     
-    plt.figure(figsize=(16,8)) 
-    # Plots of referenced velocity variance with depth
-    plt.subplot(164)
-    plt.plot(currents.velocity_E_DAC_reference.var(dim='profile_index'), currents.depth, ':r', label='E$_{orig}$')
-    plt.plot(currents.velocity_N_DAC_reference.var(dim='profile_index'), currents.depth, ':b', label='N$_{orig}$')
-    if corr_present:
-        plt.plot(currents.velocity_E_DAC_reference_sb_corrected.var(dim='profile_index'), currents.depth, '-r', label='E$_{corr}$')
-        plt.plot(currents.velocity_N_DAC_reference_sb_corrected.var(dim='profile_index'), currents.depth, '-b', label='N$_{corr}$')
-    plt.legend()
-    plt.xlabel('Velocity Variance')
-    plt.ylabel('Depth')
-    plt.gca().invert_yaxis()
-    YL = plt.ylim()
+    if plot_all:
+        # Plots of referenced velocity variance with depth
+        plt.subplot(2,2,4)
+        plt.plot(currents.velocity_E_DAC_reference.var(dim='profile_index'), currents.depth, ':r', label='E$_{orig}$')
+        plt.plot(currents.velocity_N_DAC_reference.var(dim='profile_index'), currents.depth, ':b', label='N$_{orig}$')
+        if corr_present:
+            plt.plot(currents.velocity_E_DAC_reference_sb_corrected.var(dim='profile_index'), currents.depth, '-r', label='E$_{corr}$')
+            plt.plot(currents.velocity_N_DAC_reference_sb_corrected.var(dim='profile_index'), currents.depth, '-b', label='N$_{corr}$')
+        plt.legend()
+        plt.xlabel('Velocity Variance')
+        plt.ylabel('Depth')
+        plt.gca().invert_yaxis()
+        YL = plt.ylim()
 
-    # Velocity sections
-    plt.subplot(421)
-    plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference, cmap=cmo.balance)
-    plt.colorbar(label='E$_{orig}$')
-    CL = plt.clim()
-    XL = plt.xlim()
-    plt.ylim(YL)
+        # Velocity sections
+        plt.subplot(8,2,9)
+        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference, cmap=cmo.balance)
+        plt.colorbar(label='E$_{orig}$')
+        CL = plt.clim()
+        XL = plt.xlim()
+        plt.ylim(YL)
 
-    if corr_present:
-        plt.subplot(423)
-        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference_sb_corrected, cmap=cmo.balance)
-        plt.colorbar(label='E$_{corr}$')
-        plt.clim(CL)
+        if corr_present:
+            plt.subplot(8,2,11)
+            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference_sb_corrected, cmap=cmo.balance)
+            plt.colorbar(label='E$_{corr}$')
+            plt.clim(CL)
+            plt.xlim(XL)
+            plt.ylim(YL)
+
+        plt.subplot(8,2,13)
+        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference, cmap=cmo.balance)
+        plt.colorbar(label='N$_{orig}$')
+        CL = plt.clim()
         plt.xlim(XL)
         plt.ylim(YL)
-    
-    plt.subplot(425)
-    plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference, cmap=cmo.balance)
-    plt.colorbar(label='N$_{orig}$')
-    CL = plt.clim()
-    plt.xlim(XL)
-    plt.ylim(YL)
-    
-    if corr_present:
-        plt.subplot(427)
-        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference_sb_corrected, cmap=cmo.balance)
-        plt.colorbar(label='N$_{corr}$')
-        plt.clim(CL)
-        plt.xlim(XL)
-        plt.ylim(YL)
+
+        if corr_present:
+            plt.subplot(8,2,15)
+            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference_sb_corrected, cmap=cmo.balance)
+            plt.colorbar(label='N$_{corr}$')
+            plt.clim(CL)
+            plt.xlim(XL)
+            plt.ylim(YL)
     
     plt.tight_layout()
     
@@ -259,23 +255,23 @@ def regress_bias(currents,options):
     """
 
     def __score(coeffs, *args):
-        currs = correct_bias(args[0], coeffs[0], coeffs[1])
+        currs = correct_bias(args[0], args[1], coeffs[0], coeffs[1])
         directions = ['N','E']
         score = 0.
         idx = 0
+        
+        upper,lower = options['shear_bias_regression_depth_slice']
         for l1 in directions:
             for l2 in directions:
                 idx += 1
                 score = score + np.abs(_linear_regression(
                         currs[f'displacement_though_water_{l1}'].values, 
-                        currs[f'velocity_{l2}_DAC_reference_sb_corrected'].differentiate('depth').mean(dim='depth', skipna=True).values,
+                        currs[f'velocity_{l2}_DAC_reference_sb_corrected'].sel(depth=slice(upper,lower)).differentiate('depth').mean(dim='depth', skipna=True).values,
                         options,
-                        mask=np.abs(currs[f'displacement_though_water_{l1}'].values) > 100,
-                        plot=False
                     ))*1e9
         return score
     
-    results = fmin(__score, [0,0], args=(currents,), maxiter=300, disp=True, xtol=1e-9, ftol=1e-9)
+    results = fmin(__score, [0,0], args=(currents,options), maxiter=300, disp=True, xtol=1e-9, ftol=1e-9)
     
     plog(f'Final results of shear bias regression: ')
     plog(f'    Along-glider bias :  {results[0]:.2E}')
@@ -284,7 +280,7 @@ def regress_bias(currents,options):
     return results[0], results[1]
 
     
-def correct_bias(currents, bias_along_glider, bias_across_glider):
+def correct_bias(currents, options, bias_along_glider, bias_across_glider):
     """
     Calculates the articifial velocity profile created by the shear bias and outputs two new variables:
         "velocity_{direction}_DAC_reference_sb_corrected" - DAC referenced, shear-bias corrected velocity profiles.
@@ -295,6 +291,8 @@ def correct_bias(currents, bias_along_glider, bias_across_glider):
     ----------
     currents : xr.Dataset
         Dataset containing gridded shear and velocity data produced by the gliderad2cp.process_currents functions.
+    options : dict
+        Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
     bias_along_glider, bias_across_glider : float
         Floats which define the scaling factor applied to the shear bias correction in the along and across glider directions.
         
@@ -308,8 +306,12 @@ def correct_bias(currents, bias_along_glider, bias_across_glider):
     mask = np.isfinite(currents[f'velocity_E_DAC_reference'].values)
     mask[mask == False] = np.NaN
     
-    currents['shear_bias_velocity_E'] =  ((currents.heading_E*bias_along_glider - currents.heading_N*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
-    currents['shear_bias_velocity_N'] =  ((currents.heading_N*bias_along_glider - currents.heading_E*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
+    if options['velocity_dependent_shear_bias_correction']:
+        currents['shear_bias_velocity_E'] =  (currents.speed_through_water * (currents.heading_E*bias_along_glider - currents.heading_N*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
+        currents['shear_bias_velocity_N'] =  (currents.speed_through_water * (currents.heading_N*bias_along_glider - currents.heading_E*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
+    else:
+        currents['shear_bias_velocity_E'] =  ((currents.heading_E*bias_along_glider - currents.heading_N*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
+        currents['shear_bias_velocity_N'] =  ((currents.heading_N*bias_along_glider - currents.heading_E*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
     
     directions = ['N','E']
     for l in directions:
@@ -350,15 +352,18 @@ def process(currents, options):
 
     .process() runs the following functions in this order
     -------
-    1. regress_bias
-    2. correct_bias
-    3. visualise
+    1. visualise
+    2. regress_bias
+    3. correct_bias
+    4. visualise
 
     """
     
+    visualise(currents, options, plot_all=False)
+    
     bias_along_glider, bias_across_glider = regress_bias(currents, options)
     
-    currents = correct_bias(currents, bias_along_glider, bias_across_glider)
+    currents = correct_bias(currents, options, bias_along_glider, bias_across_glider)
     
     visualise(currents, options)
     

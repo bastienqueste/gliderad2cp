@@ -13,16 +13,17 @@ def get_options(verbose=True, **kwargs):
     """
     options = {
         'correct_compass_calibration' : [True, False],
-        'shear_to_velocity_method' : ['integrate','-lsq'],
-        'shear_bias_correction_method' : ['drift','-variance','-deep_variance'],
+        'shear_to_velocity_method' : ['integrate',],
         'ADCP_mounting_direction' : ['auto', 'top', 'bottom'],
-        'QC_correlation_threshold' : [85, 'minimum acceptable along-beam correlation value.'],
-        'QC_amplitude_threshold' : [70, 'maximum acceptable along-beam amplitude.'],
-        'QC_velocity_threshold' : [0.7, 'maximum acceptable along-beam velocity in m.s-1.'],
+        'QC_correlation_threshold' : [80, 'minimum acceptable along-beam correlation value.'],
+        'QC_amplitude_threshold' : [80, 'maximum acceptable along-beam amplitude.'],
+        'QC_velocity_threshold' : [0.8, 'maximum acceptable along-beam velocity in m.s-1.'],
         'velocity_regridding_distance_from_glider' : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.'],
         'xaxis' : [1, 'x-axis resolution in number of profiles of the final gridded products.'],
         'yaxis' : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.'],
-        'weight_shear_bias_regression' : [True, False, 'Give greater weight to dives with greater travel distance which increases signal to noise.']
+        'weight_shear_bias_regression' : [False, True, 'Give greater weight to dives with greater travel distance which can increase signal to noise.'],
+        'velocity_dependent_shear_bias_correction' : [False, True, 'Determine velocity dependent shear-bias correction coefficients rather than constant coefficients.'],
+        'shear_bias_regression_depth_slice' : [(0, 1000), 'A tuple containing the upper and lower depth limits over which to determine shear bias. Helpful to avoid increased noise due to surface variability. For deep diving gliders (500,1000) is good.'],
         }
         
     default = dict()
