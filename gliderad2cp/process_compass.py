@@ -14,6 +14,7 @@ from tqdm import tqdm
 from datetime import timedelta
 from scipy.interpolate import interp1d, interp2d
 
+from .tools import plog
 
 def interpt(x,y,xi):
     _gg = np.isfinite(x.astype('float')+y)
@@ -24,45 +25,44 @@ def align_time(y,coeffs):
     return aligned
 rmsd = lambda x,y : np.sqrt(np.nanmean( (x-y)**2 ))
 
-def process(ADCP):    
-    
+def process(ADCP, options):    
     ## STEP 1 : collect magnetic target
     # Technically not that big a deal unless covering multiple different areas, in which case we should change the fielf over time, which we don't. Basically, any old constant will do.
     # Get local geomagnetic target strength:
-    def getGeoMagStrength():    
-        lat = 57.682374
-        lon = 11.888402
-        date = pd.to_datetime(tax[0])
-        year = date.year
-        month = date.month
-        day = date.day
+#     def getGeoMagStrength():    
+#         lat = 57.682374
+#         lon = 11.888402
+#         date = pd.to_datetime(tax[0])
+#         year = date.year
+#         month = date.month
+#         day = date.day
         
-        url = str('http://geomag.bgs.ac.uk/web_service/GMModels/igrf/13/?'+
-              'latitude='+str(lat)+'&longitude='+str(lon)+
-              '&date='+str(year)+'-'+str(month)+'-'+str(day)+
-              '&resultFormat=csv')
-        import urllib
-        magdata = urllib.request.urlopen(url)
+#         url = str('http://geomag.bgs.ac.uk/web_service/GMModels/igrf/13/?'+
+#               'latitude='+str(lat)+'&longitude='+str(lon)+
+#               '&date='+str(year)+'-'+str(month)+'-'+str(day)+
+#               '&resultFormat=csv')
+#         import urllib
+#         magdata = urllib.request.urlopen(url)
         
-        string = 'empty'
-        while not not string:
-            out = magdata.readline().decode("utf-8")
-            if 'total-intensity units="nT"' in out:
-                string = out
-                print(out)
-                break
-        target = float(string.split('>')[1].split('<')[0])
-        nT2milligauss = 10**-9 * 10000 * 1000 # To tesla, then to gauss then to millgauss
-        print('Target = '+str(target*nT2milligauss))
-        return target*nT2milligauss
+#         string = 'empty'
+#         while not not string:
+#             out = magdata.readline().decode("utf-8")
+#             if 'total-intensity units="nT"' in out:
+#                 string = out
+#                 print(out)
+#                 break
+#         target = float(string.split('>')[1].split('<')[0])
+#         nT2milligauss = 10**-9 * 10000 * 1000 # To tesla, then to gauss then to millgauss
+#         print('Target = '+str(target*nT2milligauss))
+#         return target*nT2milligauss
     
-    target = getGeoMagStrength()
+    target = 500 #getGeoMagStrength()
     
     
     ## STEP 2 : Extract ADCP magnetometer data
-    if top_mounted:
+    if options['ADCP_mounting_direction'] == 'top':
         sign = -1
-    else:
+    elif options['ADCP_mounting_direction'] == 'bottom':
         sign = 1
     
     MagX = ADCP['MagnetometerX'].values
@@ -245,53 +245,46 @@ def process(ADCP):
         plt.scatter(cal_heading,norm(magx,magy,magz),2,'k')
         plt.scatter(cal_heading[idx],norm(magx,magy,magz)[idx],2,'c')
     
-        plot_validation(cal_heading)
     
     return cal_heading
 
 
+def correct_heading(ADCP, options):
+    if "Heading_old" in ADCP:
+        ADCP["Heading"] = ("time", ADCP["Heading_old"].values)
+        plog("Heading already corrected - resetting to original heading first.")
 
-def correct_heading(ADCP, glider, options): # TODO Move to compass script
-    if options["correctADCPHeading"]:
-        if "Heading_old" in ADCP:
-            ADCP["Heading"] = ("time", ADCP["Heading_old"].values)
-            _log.info("Resetting to original heading")
-
-        ADCP["Heading_old"] = ("time", ADCP["Heading"].values)
-        ADCP["Heading"] = (
-            _heading_correction(ADCP, glider, options) + ADCP["declination"]
-        )
-        plog("Corrected heading and accounted for declination")
-    else:
-        plog("Uncorrected heading and declination NOT added.")
+    ADCP["Heading_old"] = ("time", ADCP["Heading"].values)
+    ADCP["Heading"] = (
+        process(ADCP, options) + ADCP["declination"]
+    )
+    plog("Corrected heading and accounted for declination")
     return ADCP
 
 
+# def get_declination(data, key): # TODO: move to compass file
+#     """
+#     Function retrieves declination data from NOAA for the average lon, lat and datetime of glider data.
+#     Requires an API key. Register at https://www.ngdc.noaa.gov/geomag/CalcSurvey.shtml
 
-
-def get_declination(data, key): # TODO: move to compass file
-    """
-    Function retrieves declination data from NOAA for the average lon, lat and datetime of glider data.
-    Requires an API key. Register at https://www.ngdc.noaa.gov/geomag/CalcSurvey.shtml
-
-    :param data: pd.DataFrame of glider data including time, longitude and latitude
-    :param key: API key for the NOAA geomag service
-    :return: dataframe with added declination column
-    """
-    if "declination" in list(data):
-        _log.info("declination data already present")
-        return data
-    time = data.time.mean()
-    year = time.year
-    month = time.month
-    day = time.day
-    lat = data.latitude.mean()
-    lon = data.longitude.mean()
-    url = (
-        f"https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?startYear={year}&startMonth={month}"
-        f"&startDay={day}&lat1={lat}&lon1={lon}&key={key}&resultFormat=json"
-    )
-    result = json.load(request.urlopen(url))
-    declination = result["result"][0]["declination"]
-    _log.info(f"declination of {declination} added to data")
-    data["declination"] = declination
+#     :param data: pd.DataFrame of glider data including time, longitude and latitude
+#     :param key: API key for the NOAA geomag service
+#     :return: dataframe with added declination column
+#     """
+#     if "declination" in list(data):
+#         _log.info("declination data already present")
+#         return data
+#     time = data.time.mean()
+#     year = time.year
+#     month = time.month
+#     day = time.day
+#     lat = data.latitude.mean()
+#     lon = data.longitude.mean()
+#     url = (
+#         f"https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?startYear={year}&startMonth={month}"
+#         f"&startDay={day}&lat1={lat}&lon1={lon}&key={key}&resultFormat=json"
+#     )
+#     result = json.load(request.urlopen(url))
+#     declination = result["result"][0]["declination"]
+#     _log.info(f"declination of {declination} added to data")
+#     data["declination"] = declination

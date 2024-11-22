@@ -209,8 +209,28 @@ def _grid_shear(ADCP, xi, yi):
                               )
 
     # Gridding function for shear
+    plog(f'    Gridding flight metrics.')
     grid = lambda var_name, fn_name : grid2d(x, y, ADCP[var_name].values.flatten(), xi=xi, yi=yi, fn=fn_name)[0]
     count_valid = lambda x : np.count_nonzero(np.isfinite(x))
+    cos_mean = lambda head : np.nanmean(np.cos(np.deg2rad(head))) # N
+    sin_mean = lambda head : np.nanmean(np.sin(np.deg2rad(head))) # E
+    
+    currents['heading_N'] = (('depth', 'profile_index'),
+                       grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
+                         ADCP.Heading.values,
+                         xi=xi, yi=yi, fn=cos_mean)[0]
+                      )
+    currents['heading_E'] = (('depth', 'profile_index'),
+                           grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
+                             ADCP.Heading.values,
+                             xi=xi, yi=yi, fn=sin_mean)[0]
+                          )
+    currents['speed_through_water'] = (('depth', 'profile_index'),
+                           grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
+                             np.sqrt(ADCP.X.mean(dim='gridded_bin')**2 +ADCP.Y.mean(dim='gridded_bin')**2 +ADCP.Z.mean(dim='gridded_bin')**2),
+                             xi=xi, yi=yi, fn=np.nanmean)[0]
+                          )
+    
     # Grid shear data and metrics
     plog(f'    Gridding eastward shear metrics.')
     currents['shear_E_mean'] = (('depth', 'profile_index'),   grid('Sh_E', np.nanmean))
@@ -238,7 +258,7 @@ def _grid_shear(ADCP, xi, yi):
         np.sqrt(currents.shear_N_count)
         / currents.shear_N_mean
     )
-
+    
     return currents
 
 def _grid_velocity(currents, method='integrate'):
@@ -332,6 +352,7 @@ def _reference_velocity(currents, DAC):
         currents[f'DAC_{direction}'] = ('profile_index', interp(DAC['dive_time'].astype('float'), DAC['dac'][:,DAC_idx], currents.time.values.astype('float')))
         currents[f'displacement_though_water_{direction}'] = ('profile_index', interp(DAC['dive_time'].astype('float'), DAC['xy_displacement_through_water'][:,DAC_idx], currents.time.values.astype('float')))
 
+        
         velocity = currents[f'velocity_{direction}_no_reference'].values * time_in_bin / np.broadcast_to(time_in_bin_mean[np.newaxis,:],time_in_bin.shape)
         reference = currents[f'DAC_{direction}'].values - np.nanmean(velocity, axis=0)
 
@@ -340,90 +361,6 @@ def _reference_velocity(currents, DAC):
         currents[f'velocity_{direction}_DAC_reference'] = currents[f'velocity_{direction}_no_reference'] + currents[f'reference_{direction}_from_DAC']
 
     return currents
-
-def assess_shear_bias(currents):
-    from scipy import stats
-    from scipy.stats import t
-    import matplotlib.pyplot as plt
-
-    def fit(x,y,c=None,mask=True):
-        _gd = np.isfinite(x+y) & (np.abs(x) > 200) & mask
-        x = x[_gd]
-        y = y[_gd]
-        res = stats.linregress(x, y)
-        if c is None:
-            plt.plot(x, y, '.', label='original data')
-        else:
-            plt.scatter(x,y,5,c[_gd])
-            plt.colorbar()
-        plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
-
-        # Two-sided inverse Students t-distribution
-        # p - probability, df - degrees of freedom
-        tinv = lambda p, df: abs(t.ppf(p/2, df))
-        ts = tinv(0.05, len(x)-2)
-
-        plt.plot(x, res.intercept + (res.slope+ts*res.stderr)*x - (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
-        plt.plot(x, res.intercept + (res.slope+ts*res.stderr)*x + (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
-        plt.plot(x, res.intercept + (res.slope-ts*res.stderr)*x - (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
-        plt.plot(x, res.intercept + (res.slope-ts*res.stderr)*x + (ts*res.intercept_stderr), 'k', alpha=0.3, linestyle=':')
-        plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
-        color = 'lightgrey'
-        if np.abs(3*ts*res.stderr) < np.abs(res.slope):
-            color = 'orange'
-        if np.abs(5*ts*res.stderr) < np.abs(res.slope):
-            color = 'red'
-        plt.xlabel(f'Displacement {l1}')
-        plt.ylabel(f'Shear {l2}')
-        #print(f"slope (95%): {res.slope:.2E} +/- {ts*res.stderr:.2E}")
-        plt.title(f"R² = {res.rvalue**2:.2f}\nslope (95%): {res.slope:.2E} +/- {ts*res.stderr:.2E}", color=color)
-        #print(f"intercept (95%): {res.intercept:.2E}", f" +/- {ts*res.intercept_stderr:.2E}")
-    
-    plt.figure(figsize=(12,10))
-    directions = ['N','E']
-    idx = 0
-    for l1 in directions:
-        for l2 in directions:
-            idx += 1
-            plt.subplot(2,2,idx)
-            fit(
-                currents[f'displacement_though_water_{l1}'].values, 
-                currents[f'shear_{l2}_mean'].mean(dim='depth', skipna=True),
-                c=currents['time_in_bin'].sum(dim='depth', skipna=True),
-                mask=True # (np.abs(currents[f'shear_{l2}_mean'].sel(depth=slice(500,1000)).sum(dim='depth', skipna=True)) > 0)
-            )
-    plt.tight_layout()
-    
-    plt.figure(figsize=(10,6))
-
-    plt.subplot(131)
-    plt.plot(currents.shear_E_mean.mean(dim='profile_index'), currents.depth, label='ShE mean')
-    plt.plot(currents.shear_N_mean.mean(dim='profile_index'), currents.depth, label='ShN mean')
-    plt.legend()
-    plt.xlabel('Mean Shear')
-    plt.ylabel('Depth')
-    plt.xlim([-0.002,0.002])
-    plt.axvline(0, color='k', alpha=0.3)
-    plt.gca().invert_yaxis()
-
-    plt.subplot(132)
-    plt.plot(currents.velocity_E_DAC_reference.mean(dim='profile_index'), currents.depth, label='E mean')
-    plt.plot(currents.velocity_N_DAC_reference.mean(dim='profile_index'), currents.depth, label='N mean')
-    plt.legend()
-    plt.xlabel('Mean Velocity')
-    plt.ylabel('Depth')
-    plt.axvline(0, color='k', alpha=0.3)
-    plt.gca().invert_yaxis()
-
-    plt.subplot(133)
-    plt.plot(currents.velocity_E_DAC_reference.var(dim='profile_index'), currents.depth, label='E variance')
-    plt.plot(currents.velocity_N_DAC_reference.var(dim='profile_index'), currents.depth, label='N variance')
-    plt.legend()
-    plt.xlabel('Velocity Variance')
-    plt.ylabel('Depth')
-    plt.gca().invert_yaxis()
-
-    plt.tight_layout()
 
 
 """
@@ -463,10 +400,6 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
     3. _grid_velocity - Assemble shear measurements to reconstruct velocity profiles.
     4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
     
-    (Optional steps:) - Not coded up yet
-    (5. assess_shear_bias) - Not coded up yet
-    (6. correct_shear_bias) - Not coded up yet.
-  
     """
     # Load default options if not present.
     if not options:
@@ -491,7 +424,4 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
     currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
     currents = _reference_velocity(currents,DAC)
     
-    assess_shear_bias(currents)
-    #correct_shear_bias
-    
-    return currents
+    return currents, DAC

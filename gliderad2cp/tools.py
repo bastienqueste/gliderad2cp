@@ -16,14 +16,14 @@ def get_options(verbose=True, **kwargs):
         'shear_to_velocity_method' : ['integrate','-lsq'],
         'shear_bias_correction_method' : ['drift','-variance','-deep_variance'],
         'ADCP_mounting_direction' : ['auto', 'top', 'bottom'],
-        'QC_correlation_threshold' : [75, 'minimum acceptable along-beam correlation value.'],
-        'QC_amplitude_threshold' : [75, 'maximum acceptable along-beam amplitude.'],
-        'QC_velocity_threshold' : [1, 'maximum acceptable along-beam velocity in m.s-1.'],
+        'QC_correlation_threshold' : [85, 'minimum acceptable along-beam correlation value.'],
+        'QC_amplitude_threshold' : [70, 'maximum acceptable along-beam amplitude.'],
+        'QC_velocity_threshold' : [0.7, 'maximum acceptable along-beam velocity in m.s-1.'],
         'velocity_regridding_distance_from_glider' : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.'],
         'xaxis' : [1, 'x-axis resolution in number of profiles of the final gridded products.'],
         'yaxis' : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.'],
-        'debug_figures' : [False, 'Path where debugging and analysis figures should be saved.']
-    }
+        'weight_shear_bias_regression' : [True, False, 'Give greater weight to dives with greater travel distance which increases signal to noise.']
+        }
         
     default = dict()
     

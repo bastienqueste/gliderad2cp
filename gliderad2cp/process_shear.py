@@ -51,6 +51,7 @@ import xarray as xr
 import gsw
 
 from .tools import *
+from .process_compass import correct_heading
 
 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 warnings.filterwarnings(action='ignore', message='invalid value encountered in divide')
@@ -668,9 +669,8 @@ def process(adcp_file_path, glider_file_path, options=None):
                     )
     
     # Correct heading based on magnetometer data.
-    # if options['correct_compass_calibration']:   
-        # THIS NEEDS READDING
-        #ADCP = correct_heading(ADCP, data, options)
+    if options['correct_compass_calibration']:   
+        ADCP = correct_heading(ADCP, options)
     
     # Correct data for soundspeed and quality control based on correlation, amplitude and velocity.
     ADCP = _velocity_soundspeed_correction(ADCP)
