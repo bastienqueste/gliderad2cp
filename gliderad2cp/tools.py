@@ -24,6 +24,9 @@ def get_options(verbose=True, **kwargs):
         'weight_shear_bias_regression' : [False, True, 'Give greater weight to dives with greater travel distance which can increase signal to noise.'],
         'velocity_dependent_shear_bias_correction' : [False, True, 'Determine velocity dependent shear-bias correction coefficients rather than constant coefficients.'],
         'shear_bias_regression_depth_slice' : [(0, 1000), 'A tuple containing the upper and lower depth limits over which to determine shear bias. Helpful to avoid increased noise due to surface variability. For deep diving gliders (500,1000) is good.'],
+        'pitch_offset' : [0, 'value to be added to pitch to correct for transducer-compass misalignment'],
+        'roll_offset' : [0, 'value to be added to roll to correct for transducer-compass misalignment'],
+        'heading_offset' : [0, 'value to be added to heading to correct for transducer-compass misalignment'],
         }
         
     default = dict()

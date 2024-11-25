@@ -161,6 +161,7 @@ def visualise(currents, options, plot_all=True):
     upper,lower = options['shear_bias_regression_depth_slice']
     # Plot linear regression of shear versus displacement
     plt.figure(figsize=(10,20))
+    plt.tight_layout()
     directions = ['N','E']
     idx = 0
     for l1 in directions:
@@ -197,12 +198,15 @@ def visualise(currents, options, plot_all=True):
         plt.ylabel('Depth')
         plt.gca().invert_yaxis()
         YL = plt.ylim()
-
+        
+        cl = np.max(np.abs([currents.velocity_E_DAC_reference.max(),currents.velocity_E_DAC_reference.min(),currents.velocity_N_DAC_reference.max(),currents.velocity_N_DAC_reference.min()]))
+        cl = np.array([-1,1])*cl
+        
         # Velocity sections
         plt.subplot(8,2,9)
         plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference, cmap=cmo.balance)
         plt.colorbar(label='E$_{orig}$')
-        CL = plt.clim()
+        plt.clim(cl)
         XL = plt.xlim()
         plt.ylim(YL)
 
@@ -210,14 +214,14 @@ def visualise(currents, options, plot_all=True):
             plt.subplot(8,2,11)
             plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference_sb_corrected, cmap=cmo.balance)
             plt.colorbar(label='E$_{corr}$')
-            plt.clim(CL)
+            plt.clim(cl)
             plt.xlim(XL)
             plt.ylim(YL)
 
         plt.subplot(8,2,13)
         plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference, cmap=cmo.balance)
         plt.colorbar(label='N$_{orig}$')
-        CL = plt.clim()
+        plt.clim(cl)
         plt.xlim(XL)
         plt.ylim(YL)
 
@@ -225,9 +229,9 @@ def visualise(currents, options, plot_all=True):
             plt.subplot(8,2,15)
             plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference_sb_corrected, cmap=cmo.balance)
             plt.colorbar(label='N$_{corr}$')
-            plt.clim(CL)
             plt.xlim(XL)
             plt.ylim(YL)
+            plt.clim(cl)
     
     plt.tight_layout()
     

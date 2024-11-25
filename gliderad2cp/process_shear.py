@@ -51,7 +51,6 @@ import xarray as xr
 import gsw
 
 from .tools import *
-from .process_compass import correct_heading
 
 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 warnings.filterwarnings(action='ignore', message='invalid value encountered in divide')
@@ -72,7 +71,7 @@ def load_data(adcp_file_path, glider_file_path, options):
     adcp_file_path : str
         Path to the AD2CP netcdf files created by the Nortek MIDAS software. Can handle wildcards through glob.
     glider_file_path : str
-        Path to the glider file containing time, latitude, longitude, soundspeed, profile_num, and declination.
+        Path to the glider file containing time, latitude, longitude, soundspeed, and profile_num.
         Can be csv, pandas or xarray. Can also pass pandas or xarray dataframes directly.
     options : dict
         Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
@@ -96,7 +95,7 @@ def load_data(adcp_file_path, glider_file_path, options):
         Inputs
         ----------
         glider_file_path : str
-            Path to the glider file containing time, latitude, longitude, soundspeed, profile_num, and declination. Can be csv, pandas or xarray.
+            Path to the glider file containing time, latitude, longitude, soundspeed, and profile_num. Can be csv, pandas or xarray.
 
 
         Outputs
@@ -131,7 +130,6 @@ def load_data(adcp_file_path, glider_file_path, options):
             'latitude',
             'longitude',
             'profile_number',
-            'declination',
             'pressure',
         ]
         data = data[sel_cols]
@@ -181,7 +179,6 @@ def load_data(adcp_file_path, glider_file_path, options):
     ADCP = ADCP.assign_coords(profile_number=('time', np.round(interp(glider_time_float, glider_data['profile_number'], adcp_time_float))))
     ADCP = ADCP.assign_coords(Depth=('time', -gsw.z_from_p(ADCP['Pressure'].values, ADCP['Latitude'].values)) )
     
-    ADCP['declination']       = ('time', interp(glider_time_float, glider_data['declination'], adcp_time_float) )
     ADCP['glider_soundspeed'] = ('time', interp(glider_time_float, glider_data['soundspeed'], adcp_time_float) )
 
     # Get rid of pointless dimensions and make them coordinates instead
@@ -314,34 +311,39 @@ def _determine_velocity_measurement_depths(ADCP, options):
         Same as input with additional D1, D2, D3 and D4 depth variabiles.
     
     """
+    H = ADCP['Heading'] + options['heading_offset']
+    P = ADCP['Pitch'] + options['pitch_offset']
+    R = ADCP['Roll'] + options['roll_offset']
+    
+    
     # All *_Range coordinates are distance along beam. Verified with data.
     if options['ADCP_mounting_direction'] == 'top':
         direction = 1
         theta_rad_1 = np.arccos(
-            np.cos(np.deg2rad(47.5 - ADCP['Pitch'])) * np.cos(np.deg2rad(ADCP['Roll']))
+            np.cos(np.deg2rad(47.5 - P)) * np.cos(np.deg2rad(R))
         )
         theta_rad_2 = np.arccos(
-            np.cos(np.deg2rad(25 - ADCP['Roll'])) * np.cos(np.deg2rad(ADCP['Pitch']))
+            np.cos(np.deg2rad(25 - R)) * np.cos(np.deg2rad(P))
         )
         theta_rad_3 = np.arccos(
-            np.cos(np.deg2rad(47.5 + ADCP['Pitch'])) * np.cos(np.deg2rad(ADCP['Roll']))
+            np.cos(np.deg2rad(47.5 + P)) * np.cos(np.deg2rad(R))
         )
         theta_rad_4 = np.arccos(
-            np.cos(np.deg2rad(25 + ADCP['Roll'])) * np.cos(np.deg2rad(ADCP['Pitch']))
+            np.cos(np.deg2rad(25 + R)) * np.cos(np.deg2rad(A))
         )
     else:
         direction = -1
         theta_rad_1 = np.arccos(
-            np.cos(np.deg2rad(47.5 + ADCP['Pitch'])) * np.cos(np.deg2rad(ADCP['Roll']))
+            np.cos(np.deg2rad(47.5 + P)) * np.cos(np.deg2rad(R))
         )
         theta_rad_2 = np.arccos(
-            np.cos(np.deg2rad(25 + ADCP['Roll'])) * np.cos(np.deg2rad(ADCP['Pitch']))
+            np.cos(np.deg2rad(25 + R)) * np.cos(np.deg2rad(P))
         )
         theta_rad_3 = np.arccos(
-            np.cos(np.deg2rad(47.5 - ADCP['Pitch'])) * np.cos(np.deg2rad(ADCP['Roll']))
+            np.cos(np.deg2rad(47.5 - P)) * np.cos(np.deg2rad(R))
         )
         theta_rad_4 = np.arccos(
-            np.cos(np.deg2rad(25 - ADCP['Roll'])) * np.cos(np.deg2rad(ADCP['Pitch']))
+            np.cos(np.deg2rad(25 - R)) * np.cos(np.deg2rad(P))
         )
     # For an upward facing ADCP, beam 1 ~= 30.1 deg on the way up, beam 3 on the way down, when flying at 17.4 degree pitch.
     # The above functions return angles of each beam from the UP direction
@@ -499,7 +501,7 @@ def _rotate_BEAMS_to_XYZ(ADCP, options):
     V3 = ADCP['V3'].values
     V4 = ADCP['V4'].values
     
-    upcasts = ADCP['Pitch'] > 0
+    upcasts = (ADCP['Pitch']+options['pitch_offset']) > 0
     downcasts = ~upcasts
     
     replaced_by = lambda good_beam : (2 * b(ts) * V2 + 2 * b(ts) * V4 - 2 * b(tf) * good_beam) / (2 * b(tf))
@@ -575,9 +577,9 @@ def _rotate_XYZ_to_ENU(ADCP, options):
         direction = -1
 
     plog('Calculating E, N, U velocities from X, Y, Z velocities.')
-    H = ADCP['Heading']
-    P = ADCP['Pitch']
-    R = ADCP['Roll']
+    H = ADCP['Heading'] + options['heading_offset']
+    P = ADCP['Pitch'] + options['pitch_offset']
+    R = ADCP['Roll'] + options['roll_offset']
     M = __M_xyz2enu(H, P, R)
 
     E = (
@@ -630,7 +632,7 @@ def process(adcp_file_path, glider_file_path, options=None):
     adcp_file_path : str
         Path to the AD2CP netcdf files created by the Nortek MIDAS software. Can handle wildcards through glob.
     glider_file_path : str
-        Path to the glider file containing time, latitude, longitude, soundspeed, profile_num, and declination.
+        Path to the glider file containing time, latitude, longitude, soundspeed, and profile_num.
         Can be csv, pandas or xarray. Can also pass pandas or xarray dataframes directly.
     options : dict
         Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
@@ -669,8 +671,9 @@ def process(adcp_file_path, glider_file_path, options=None):
                     )
     
     # Correct heading based on magnetometer data.
-    if options['correct_compass_calibration']:   
-        ADCP = correct_heading(ADCP, options)
+    # Option to be implemented after publication of methods paper. Contact Bastien Queste for details.
+    # if options['correct_compass_calibration']:   
+    #     ADCP = correct_heading(ADCP, options)
     
     # Correct data for soundspeed and quality control based on correlation, amplitude and velocity.
     ADCP = _velocity_soundspeed_correction(ADCP)

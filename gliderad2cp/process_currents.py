@@ -147,7 +147,7 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     
     return DAC
 
-def _grid_shear(ADCP, xi, yi):
+def _grid_shear(ADCP, options, xi, yi):
     """
     Grid shear according to specifications.
 
@@ -156,6 +156,8 @@ def _grid_shear(ADCP, xi, yi):
     ----------
     ADCP : xarray.Dataframe
         Output from the gliderAD2CP.process_shear() function.
+    options : dict
+        Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
     xi : numpy.array
         Array of bins in x-axis.
     yi : numpy.array
@@ -217,12 +219,12 @@ def _grid_shear(ADCP, xi, yi):
     
     currents['heading_N'] = (('depth', 'profile_index'),
                        grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
-                         ADCP.Heading.values,
+                         ADCP.Heading.values + options['heading_offset'],
                          xi=xi, yi=yi, fn=cos_mean)[0]
                       )
     currents['heading_E'] = (('depth', 'profile_index'),
                            grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
-                             ADCP.Heading.values,
+                             ADCP.Heading.values + options['heading_offset'],
                              xi=xi, yi=yi, fn=sin_mean)[0]
                           )
     currents['speed_through_water'] = (('depth', 'profile_index'),
@@ -342,6 +344,7 @@ def _reference_velocity(currents, DAC):
     plog('Referencing velocity profiles to dive-averaged currents using baroclinic velocity weighting.')
     # DAC = \int_{0}^{z} \frac{velocity * time spent in bin}{time spent in profile} + referencing
     # DAC - \int_{0}^{z} \frac{velocity * time spent in bin}{time spent in profile} = referencing
+    
     time_in_bin, depth = xr.broadcast(currents.time_in_bin, currents.depth)
     time_in_bin = time_in_bin.values
     depth = depth.values
@@ -420,7 +423,7 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
         
     DAC = get_DAC(ADCP, gps_predive, gps_postdive)
     
-    currents = _grid_shear(ADCP, xi, yi)
+    currents = _grid_shear(ADCP, options, xi, yi)
     currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
     currents = _reference_velocity(currents,DAC)
     
