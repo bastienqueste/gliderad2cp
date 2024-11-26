@@ -259,6 +259,13 @@ def _quality_control_velocities(ADCP, options):
     prct = lambda x : '%.2f'%(np.count_nonzero(x) * 100 / n)
     plog('Removing data exceeding correlation, amplitude and velocity thresholds.')
     
+    noise_floor = np.nanpercentile(np.concatenate([
+        ADCP.AmplitudeBeam1.values,
+        ADCP.AmplitudeBeam2.values,
+        ADCP.AmplitudeBeam3.values,
+        ADCP.AmplitudeBeam4.values
+        ]).flatten(),[0.5])
+    
     for beam in ['1', '2', '3', '4']:
         
         # Calculate correlation mask
@@ -271,7 +278,7 @@ def _quality_control_velocities(ADCP, options):
 
         # Calculate amplitude mask
         A = ADCP['AmplitudeBeam' + beam].values.copy()
-        ind = A > options['QC_amplitude_threshold']
+        ind = (A > options['QC_amplitude_threshold']) | (A < noise_floor + options['QC_SNR_threshold'])
         A[ind] = np.nan
         A[np.isfinite(A)] = 1
         plog('    Beam ' + beam + ' amplitude: ' + prct(ind) + '% removed')
