@@ -41,7 +41,6 @@ import numpy as np
 from scipy.stats import t, linregress
 from scipy.optimize import fmin 
 import matplotlib.pyplot as plt
-import cmocean.cm as cmo
 from .tools import plog
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
@@ -204,7 +203,8 @@ def visualise(currents, options, plot_all=True):
         
         # Velocity sections
         plt.subplot(8,2,9)
-        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference, cmap=cmo.balance)
+        plt.set_cmap('bwr')
+        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference)
         plt.colorbar(label='E$_{orig}$')
         plt.clim(cl)
         XL = plt.xlim()
@@ -212,14 +212,16 @@ def visualise(currents, options, plot_all=True):
 
         if corr_present:
             plt.subplot(8,2,11)
-            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference_sb_corrected, cmap=cmo.balance)
+            plt.set_cmap('bwr')
+            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_E_DAC_reference_sb_corrected)
             plt.colorbar(label='E$_{corr}$')
             plt.clim(cl)
             plt.xlim(XL)
             plt.ylim(YL)
 
         plt.subplot(8,2,13)
-        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference, cmap=cmo.balance)
+        plt.set_cmap('bwr')
+        plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference)
         plt.colorbar(label='N$_{orig}$')
         plt.clim(cl)
         plt.xlim(XL)
@@ -227,7 +229,8 @@ def visualise(currents, options, plot_all=True):
 
         if corr_present:
             plt.subplot(8,2,15)
-            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference_sb_corrected, cmap=cmo.balance)
+            plt.set_cmap('bwr')
+            plt.pcolormesh(currents.profile_index, currents.depth, currents.velocity_N_DAC_reference_sb_corrected)
             plt.colorbar(label='N$_{corr}$')
             plt.xlim(XL)
             plt.ylim(YL)
