@@ -29,7 +29,7 @@ _rotate_XYZ_to_ENU
 .process() runs the following functions in this order
 -------
 1. load_data
-2. (correct_heading - Optional step)
+2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
 3. _velocity_soundspeed_correction
 4. _quality_control_velocities
 5. _determine_velocity_measurement_depths 
@@ -654,7 +654,7 @@ def process(adcp_file_path, glider_file_path, options=None):
     .process() runs the following functions in this order
     -------
     1. load_data
-    2. (correct_heading - Optional step)
+    2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
     3. _velocity_soundspeed_correction
     4. _quality_control_velocities
     5. _determine_velocity_measurement_depths 

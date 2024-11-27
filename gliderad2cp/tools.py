@@ -12,7 +12,7 @@ def get_options(verbose=True, **kwargs):
     Run with no kwargs to output a default dictionary, or with kwargs to return a full dictionary with the chose options
     """
     options = {
-        'correct_compass_calibration' : [True, False],
+        'correct_compass_calibration' : [False, 'compass correction algorithm is awaiting publication and will be added upon acceptance. Contact Bastien Queste if you require.'],
         'shear_to_velocity_method' : ['integrate',],
         'ADCP_mounting_direction' : ['auto', 'top', 'bottom'],
         'QC_correlation_threshold' : [80, 'minimum acceptable along-beam correlation value.'],
