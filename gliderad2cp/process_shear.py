@@ -355,11 +355,23 @@ def _determine_velocity_measurement_depths(ADCP, options):
     # For an upward facing ADCP, beam 1 ~= 30.1 deg on the way up, beam 3 on the way down, when flying at 17.4 degree pitch.
     # The above functions return angles of each beam from the UP direction
 
-    # Following pers. comm. with Nortek staff, the Velocity Range values are equal to distances from the ADCP along the Z-axis.
+    # Following pers. comm. with Nortek staff, the Velocity Range values are equal to distances from the ADCP along the Z-axis
+    # when using more than 2 beams.
     # These equate to longer distances along beam because they are at an angle. Which Z-axis is not obvious to the new user.
     # The ADCP assumes a Z-axis using a 3-beam configuration, even when the ADCP runs 4 beams.
-    # The angle that is used is assuming we are only sampling 3 beams, and so each beam is at 30.1 degree from the 3-beam Z-axis.
-    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(30.1))
+    # If the angle that is used is assuming we are only sampling 3 beams, each beam would be at 30.1 degree from the 3-beam Z-axis.
+    # HOWEVER !
+    # Sven Nylund<Sven.Nylund@nortekgroup.com> : Sent: 27 November 2024 10:28 swedish time
+    # "Sorry for the confusion regarding slant angle yesterday, the correction for slant angle is done at a system level so 1 MHz
+    # instruments on the AD2CP platform (like your glider unit) are corrected for a nominal 25-degree slant angle whenever more 
+    # than two beams are enabled for measurement. So, in your case, the along beam cell size will be 2.21 m when you set the cell
+    # size to 2 m. Like I said yesterday, there is no correction of this based on tilt measurements. There is neither any correction 
+    # of the cell size with regards to the sound velocity, we do the time gating based on a nominal sound velocity of 1500 m/s." 
+    # SO ....
+    # They use 25 degrees, which doesn't really make sense, but that's how we should remap.
+    # It will ve important to keep an eye on firmware updates in case they adjust this down the line as the information is not 
+    # included in any attributes.
+    z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(25))
 
     ADCP['D1'] = (
         ['time', 'bin'],
