@@ -18,7 +18,7 @@ authors:
 - family-names: Mohrmann
   given-names: Martin
   orcid: 'https://orcid.org/0000-0001-8056-4866'
-  affiliation:Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
+  affiliation: Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
 repository-code: 'https://github.com/bastienqueste/gliderad2cp'
 abstract: "gliderad2cp processes data from the Nortek AD2CP acoustic doppler current profiler (ADCP) mounted on a glider."
 license: MIT
