@@ -1,7 +1,7 @@
 import pandas as pd
 from gliderad2cp import process_currents, process_shear, process_bias, tools
 
-def bypass():
+def test_bypass():
     return True
 
 #def test_load_csv():
