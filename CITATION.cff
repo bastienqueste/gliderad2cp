@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: gliderad2cp
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+- family-names: Queste
+  given-names: Bastien Yves
+  orcid: 'https://orcid.org/0000-0002-3786-2275'
+  affiliation: Department of Marine Science, University of Gothenburg, Natrium, Box 463, 405 30 Göteborg, Sweden
+- family-names: Rollo
+  given-names: Callum
+  orcid: https://orcid.org/0000-0002-5134-7886
+  affiliation: Voice of the Ocean Foundation. Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
+- family-names: Font
+  given-names: Estel
+  orcid: 'https://orcid.org/0000-0002-8767-6665'
+  affiliation: Department of Marine Science, University of Gothenburg, Natrium, Box 463, 405 30 Göteborg, Sweden
+- family-names: Mohrmann
+  given-names: Martin
+  orcid: 'https://orcid.org/0000-0001-8056-4866'
+  affiliation: Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
+repository-code: 'https://github.com/bastienqueste/gliderad2cp'
+abstract: "gliderad2cp processes data from the Nortek AD2CP acoustic doppler current profiler (ADCP) mounted on a glider."
+license: MIT
