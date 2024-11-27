@@ -3,20 +3,20 @@ title: gliderad2cp
 message: "If you use this software, please cite it using the metadata from this file."
 type: software
 authors:
-  - given-names: Bastien Yves
-    family-names: Queste
+  - family-names: Queste
+    given-names: Bastien Yves
     orcid: 'https://orcid.org/0000-0002-3786-2275'
     affiliation: Department of Marine Science, University of Gothenburg, Natrium, Box 463, 405 30 Göteborg, Sweden
-  - given-names: Callum
-    family-names: Rollo
+  - family-names: Rollo
+    given-names: Callum
     orcid: 'https://orcid.org/0000-0002-5134-7886'
     affiliaion: Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
-  - given-names: Estel
-    family-names: Font
+  - family-names: Font
+    given-names: Estel
     orcid: 'https://orcid.org/0000-0002-8767-6665'
     affiliation: Department of Marine Science, University of Gothenburg, Natrium, Box 463, 405 30 Göteborg, Sweden
-  - given-names: Martin
-    family-names: Mohrmann
+  - family-names: Mohrmann
+    given-names: Martin
     orcid: 'https://orcid.org/0000-0001-8056-4866'
     affiliation:Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden
 repository-code: 'https://github.com/bastienqueste/gliderad2cp'
