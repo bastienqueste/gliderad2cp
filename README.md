@@ -14,9 +14,10 @@ gliderad2cp can be installed with pip
 
 ## Usage
 
+
 gliderad2cp requires 2 inputs:
 1. A netcdf (.nc) file of Nortek AD2CP data as output by the Nortek MIDAS post-processing software. This software should be procured from Nortek.
-2. Glider data in a timeseries data csv or parquet file (.pqt) file with the following variables:
+2. Glider data in a timeseries dataset with the following variables:
 - "time"
 - "temperature"
 - "salinity"
@@ -26,55 +27,59 @@ gliderad2cp requires 2 inputs:
 - "profile_number"
 - "declination"
 
-**N.B.** if declination data are not present in the datafile, they can be added with the function `process_adcp.get_declination`. Glider data can be in an xarray Dataset, csv or pqt file.
+### Process shear
 
-The primary functionality of gliderad2cp is to produce a gridded dataset of velocity shear using data from the glider and AD2CP. This is achieved with the funciton `process_shear.process`:
+The primary functionality of gliderad2cp is to produce a gridded dataset of velocity shear using data from the glider and AD2CP. This is achieved with the function `process_shear.process`:
 
 ```python
 from gliderad2cp import process_adcp
 adcp_file_path = "path/to/adcp/files"
 glider_file_path = "path/to/glider/files"
-ds_adcp, df_glider = process_shear.process(adcp_file_path, glider_file_path)
+ds_adcp = process_shear.process(adcp_file_path, glider_file_path)
 ```
+
+### Process currents
 
 Once shear velocities have been calculated using this function, the function `process_currents.process` can be used to estimate absolute velocity profiles:
 
 ```python
+from gliderad2cp import process_currents
 currents, DAC = process_currents.process(ds_adcp, gps_predive, gps_postdive)
 ```
 
 This requires the output of `process_shear.process` and GPS locations before and after each dive.
 
+### Correct shear bias
+
+Shear bias can be estimated and corrected with the function `process_bais.process`
+
+```python
+from gliderad2cp import process_bias
+process_bias.process(currents)
+```
+
 ### Additional options
 By default, the following options are used during processing:
 
 ```python
-    {correct_compass_calibration : [False, 'compass correction algorithm is awaiting publication and will be added upon acceptance. Contact Bastien Queste if you require.']
-    shear_to_velocity_method : ['integrate']
-    ADCP_mounting_direction : ['auto', 'top', 'bottom']
-    QC_correlation_threshold : [80, 'minimum acceptable along-beam correlation value.']
-    QC_amplitude_threshold : [80, 'maximum acceptable along-beam amplitude.']
-    QC_velocity_threshold : [0.8, 'maximum acceptable along-beam velocity in m.s-1.']
-    QC_SNR_threshold : [3, 'minimum acceptable dB above the noise floor.']
-    velocity_regridding_distance_from_glider : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.']
-    xaxis : [1, 'x-axis resolution in number of profiles of the final gridded products.']
-    yaxis : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.']
-    weight_shear_bias_regression : [False, True, 'Give greater weight to dives with greater travel distance which can increase signal to noise.']
-    velocity_dependent_shear_bias_correction : [False, True, 'Determine velocity dependent shear-bias correction coefficients rather than constant coefficients.']
-    shear_bias_regression_depth_slice : [(0, 1000), 'A tuple containing the upper and lower depth limits over which to determine shear bias. Helpful to avoid increased noise due to surface variability. For deep diving gliders (500,1000) is good.']
-    pitch_offset : [0, 'value to be added to pitch to correct for transducer-compass misalignment']
-    roll_offset : [0, 'value to be added to roll to correct for transducer-compass misalignment']}
+    {correct_compass_calibration : [False, 'compass correction algorithm is awaiting publication and will be added upon acceptance. Contact Bastien Queste if you require.'],
+    shear_to_velocity_method : ['integrate'],
+    ADCP_mounting_direction : ['auto', 'top', 'bottom'],
+    QC_correlation_threshold : [80, 'minimum acceptable along-beam correlation value.'],
+    QC_amplitude_threshold : [80, 'maximum acceptable along-beam amplitude.'],
+    QC_velocity_threshold : [0.8, 'maximum acceptable along-beam velocity in m.s-1.'],
+    QC_SNR_threshold : [3, 'minimum acceptable dB above the noise floor.'],
+    velocity_regridding_distance_from_glider : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.'],
+    xaxis : [1, 'x-axis resolution in number of profiles of the final gridded products.'],
+    yaxis : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.'],
+    weight_shear_bias_regression : [False, True, 'Give greater weight to dives with greater travel distance which can increase signal to noise.'],
+    velocity_dependent_shear_bias_correction : [False, True, 'Determine velocity dependent shear-bias correction coefficients rather than constant coefficients.'],
+    shear_bias_regression_depth_slice : [(0, 1000), 'A tuple containing the upper and lower depth limits over which to determine shear bias. Helpful to avoid increased noise due to surface variability. For deep diving gliders (500,1000) is good.'],
+    pitch_offset : [0, 'value to be added to pitch to correct for transducer-compass misalignment'],
+    roll_offset : [0, 'value to be added to roll to correct for transducer-compass misalignment'],}
 ```
 
 These options can be changed by using the `options` kwarg in the relevant functions.
-
-### Notebooks
-
-Notebook `01_calculate_velocity_shear.ipynb` demonstrates the core functionality of gliderad2cp. It takes a glider timeseries and a netCDF file created by a Nortek MIDAS from AD2CP data and produces a gridded dataset of velocity shear
-
-Notebook `02_integrate_velocity_shear.ipynb` shows one method of integrating this velocity shear into earth relative absolute velocities.
-
-Both notebooks use data hosted on zenodo, downloaded with [pooch](https://github.com/fatiando/pooch). The datasets can be downloaded here [https://zenodo.org/record/8431329](https://zenodo.org/record/8431329)
 
 -------------------------------
 
