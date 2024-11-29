@@ -2,8 +2,6 @@
 Calculate shear from a Nortek AD2CP mounted on a glider.
 Compatible with any glider as long as the ADCP is returning data for the 4 beams.
 TODO: make compatible with the 3-beam configuration.
-TODO: add options functionality to add a pitch/roll misalignment error
-TODO: add clock sync functionality
 
 
 Functions
@@ -352,24 +350,25 @@ def _determine_velocity_measurement_depths(ADCP, options):
         theta_rad_4 = np.arccos(
             np.cos(np.deg2rad(25 - R)) * np.cos(np.deg2rad(P))
         )
-    # For an upward facing ADCP, beam 1 ~= 30.1 deg on the way up, beam 3 on the way down, when flying at 17.4 degree pitch.
-    # The above functions return angles of each beam from the UP direction
+    
+    # The above functions return angles of each beam from the UP direction based on the attitude of the glider.
+    # Technically, if the glider is pitched 17.4 degrees, 3 beams are at 30.1 degrees.
+    # To remap bins, we need to understand how they are mapped. Is the range equal to distance along beam, or distance along
+    # an instrument relative Z-axis.
 
-    # Following pers. comm. with Nortek staff, the Velocity Range values are equal to distances from the ADCP along the Z-axis
-    # when using more than 2 beams.
-    # These equate to longer distances along beam because they are at an angle. Which Z-axis is not obvious to the new user.
-    # The ADCP assumes a Z-axis using a 3-beam configuration, even when the ADCP runs 4 beams.
-    # If the angle that is used is assuming we are only sampling 3 beams, each beam would be at 30.1 degree from the 3-beam Z-axis.
-    # HOWEVER !
-    # Sven Nylund<Sven.Nylund@nortekgroup.com> : Sent: 27 November 2024 10:28 swedish time
+    # Following pers. comm. with Nortek staff, it has been confirmed that the Velocity Range values are equal to distances
+    # from the ADCP along a Z-axis. This means that distance along beam needs to be remapped by the cosine of the beam-to-Z-axis cosine.
+    # HOWEVER counterintuitively - they did not use 30.1 degrees. See below correspondence:
+    #
+    # Sven Nylund<Sven.Nylund@nortekgroup.com> : Sent 27 November 2024 10:28 Swedish time to Bastien Queste.
     # "Sorry for the confusion regarding slant angle yesterday, the correction for slant angle is done at a system level so 1 MHz
     # instruments on the AD2CP platform (like your glider unit) are corrected for a nominal 25-degree slant angle whenever more 
     # than two beams are enabled for measurement. So, in your case, the along beam cell size will be 2.21 m when you set the cell
     # size to 2 m. Like I said yesterday, there is no correction of this based on tilt measurements. There is neither any correction 
     # of the cell size with regards to the sound velocity, we do the time gating based on a nominal sound velocity of 1500 m/s." 
-    # SO ....
-    # They use 25 degrees, which doesn't really make sense, but that's how we should remap.
-    # It will ve important to keep an eye on firmware updates in case they adjust this down the line as the information is not 
+    # 
+    # So it is hard-coded for 25 degrees, which doesn't really mesh with the geometry but it's fine as long as we know.
+    # It will be important to keep an eye on firmware updates in case they adjust this down the line as the information is not 
     # included in any attributes.
     z_bin_distance = ADCP['Velocity Range'].values/np.cos(np.deg2rad(25))
 
