@@ -178,6 +178,8 @@ def load_data(adcp_file_path, glider_file_path, options):
     ADCP = ADCP.assign_coords(Depth=('time', -gsw.z_from_p(ADCP['Pressure'].values, ADCP['Latitude'].values)) )
     
     ADCP['glider_soundspeed'] = ('time', interp(glider_time_float, glider_data['soundspeed'], adcp_time_float) )
+    ADCP['glider_salinity'] = ('time', interp(glider_time_float, glider_data['salinity'], adcp_time_float) )
+    ADCP['glider_temperature'] = ('time', interp(glider_time_float, glider_data['temperature'], adcp_time_float) )
 
     # Get rid of pointless dimensions and make them coordinates instead
     ADCP = ADCP.assign_coords( bin=('Velocity Range', np.arange(len(ADCP['Velocity Range'].values)) ) )
