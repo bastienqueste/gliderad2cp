@@ -30,18 +30,13 @@ _reference_velocity
 (6. correct_shear_bias) - Not coded up yet.
 """
 
-
-import warnings
-
 import numpy as np
-from scipy.interpolate import interp1d
-
 import pandas as pd
+import warnings
 import xarray as xr
-
 import gsw
-
-from .tools import *
+from scipy.interpolate import interp1d
+from .tools import plog, grid2d, interp, get_options
 
 warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
@@ -87,7 +82,7 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     time = ADCP.time.values.astype("float") / 1e9
     deltat = np.append(np.diff(time), np.nan)
     f = np.nanmedian(deltat)
-    deltat[deltat > f*10] = np.NaN
+    deltat[deltat > f*10] = np.nan
     deltat = np.nan_to_num(deltat)
     
     ## Create interpolannt to query DVL travel at time t.
@@ -105,12 +100,12 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     ## Preallocate arrays
     r,c = np.shape(gps_predive)
     
-    dive_time = np.full(r, np.NaN) # Duration in seconds
-    dive_duration = np.full(r, np.NaN) # Duration in seconds
+    dive_time = np.full(r, np.nan) # Duration in seconds
+    dive_duration = np.full(r, np.nan) # Duration in seconds
     
-    dac = np.full([r,2], np.NaN) # dive-averaged currents in m.s-1
-    dxy_gps =  np.full([r,2], np.NaN) # x/y displacement in m, over earth, for the dive calculated from GPS coordinates
-    dxy_dvl =  np.full([r,2], np.NaN) # x/y displacement in m, through water, for the dive calculated from ADCP as DVL
+    dac = np.full([r,2], np.nan) # dive-averaged currents in m.s-1
+    dxy_gps =  np.full([r,2], np.nan) # x/y displacement in m, over earth, for the dive calculated from GPS coordinates
+    dxy_dvl =  np.full([r,2], np.nan) # x/y displacement in m, through water, for the dive calculated from ADCP as DVL
     
     ## Useful tidbits
     pre_t  = gps_predive[:,0].astype('float') / 1e9 # s
@@ -122,7 +117,7 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     ## Calculate displacements
     for idx in range(len(gps_predive)):
         dt = post_t - pre_t[idx] # s
-        dt[dt < 0] = np.NaN
+        dt[dt < 0] = np.nan
         
         if all(np.isnan(dt)):
             plog(f'    Could not find a surfacing after dive starting: {gps_predive[idx,0]}.')

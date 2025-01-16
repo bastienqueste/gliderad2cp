@@ -35,10 +35,9 @@ __linear_regression
 
 """
 
-import logging
 import warnings
 import numpy as np
-from scipy.stats import t, linregress
+from scipy.stats import t
 from scipy.optimize import fmin 
 import matplotlib.pyplot as plt
 from .tools import plog
@@ -311,7 +310,7 @@ def correct_bias(currents, options, bias_along_glider, bias_across_glider):
         
     """
     mask = np.isfinite(currents[f'velocity_E_DAC_reference'].values)
-    mask[mask == False] = np.NaN
+    mask[mask == False] = np.nan
     
     if options['velocity_dependent_shear_bias_correction']:
         currents['shear_bias_velocity_E'] =  (currents.speed_through_water * (currents.heading_E*bias_along_glider - currents.heading_N*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask

@@ -1,92 +1,58 @@
-import pandas as pd
-from gliderad2cp import process_currents, process_shear, process_bias, tools
-
-def test_bypass():
-    return True
-
-#def test_load_csv():
-#    df_pqt = gliderad2cp.process_adcp.load(
-#        data_source.get_url("glider_profiles_160_to_210.pqt")
-#    )
-#    csv_file = "test.csv"
-#    df_pqt.to_csv(csv_file)
-#    gliderad2cp.process_adcp.load(csv_file)
+from gliderad2cp import process_currents, process_shear, tools, process_bias
+import xarray as xr
+import numpy as np
 
 
-# def test_processing():
-#     profile_range = "160_to_210"
-#     glider_pqt_path = data_source.get_url(f"glider_profiles_{profile_range}.pqt")
-#     data_source.fetch(f"adcp_profiles_{profile_range}.nc")
-#     adcp_path = str(data_source.path / f"adcp_profiles_{profile_range}.nc")
-#     options = {
-#         "correctADCPHeading": True,
-#         "ADCP_discardFirstBins": 0,
-#         "ADCP_correlationThreshold": 70,
-#         "ADCP_amplitudeThreshold": 75,
-#         "ADCP_velocityThreshold": 0.8,
-#         "correctXshear": False,
-#         "correctYshear": False,
-#         "correctZshear": False,
-#         "correctZZshear": False,
-#         "ADCP_regrid_correlation_threshold": 20,
-#     }
-#     ADCP, data, options = process_adcp.load_adcp_glider_data(
-#         adcp_path, glider_pqt_path, options
-#     )
-#     ADCP = process_adcp.remapADCPdepth(ADCP, options)
-#     ADCP = process_adcp.correct_heading(ADCP, data, options)
-#     ADCP = process_adcp.soundspeed_correction(ADCP)
-#     ADCP = process_adcp.remove_outliers(ADCP, options)
-#     #ADCP = process_adcp.correct_shear(ADCP, options)
-#     #ADCP = process_adcp.correct_backscatter(ADCP, data)
-#     ADCP = process_adcp.regridADCPdata(ADCP, options)
-#     ADCP = process_adcp.calcXYZfrom3beam(ADCP, options)
-#     ADCP = process_adcp.calcENUfromXYZ(ADCP, options)
+def test_process():
+    options = tools.get_options(xaxis=2, verbose=True)
 
-#     # get your gridded shear here
-#     xaxis, yaxis, taxis, days = process_adcp.grid_shear_data(data)
-#     out = process_adcp.grid_data(ADCP, data, {}, xaxis, yaxis)
+    data = xr.open_dataset('/home/callum/Documents/hack/data_scratch/SEA055_M82.nc')
+    data = data[
+        ["dead_reckoning", "time", "temperature", "salinity", "latitude", "pressure", "longitude", "profile_index",
+         "declination", "dive_num"]]
+    data['profile_number'] = data['profile_index']
+    adcp_path = f"/home/callum/Documents/hack/data_scratch/sea055_M82.ad2cp.00000.nc"
 
-#     ds = process_adcp.make_dataset(out)
-
-#     # integrate the gridded shear from here
-
-#     extra_data = pd.read_parquet(glider_pqt_path)
-#     extra_data.index = data.index
-#     data["speed_vert"] = extra_data["speed_vert"]
-#     data["speed_horz"] = extra_data["speed_horz"]
-#     data["dead_reckoning"] = extra_data["dead_reckoning"]
-#     data["nav_resource"] = extra_data["nav_resource"]
-#     data["dive_number"] = extra_data["dive_number"]
-#     data = process_adcp.get_DAC(ADCP, data)
-#     dE, dN, dT = process_adcp.getSurfaceDrift(data)
-#     ADCP = process_adcp.bottom_track(ADCP, adcp_path, options)
-#     out = process_adcp.reference_shear(ADCP, data, xaxis, yaxis)
-#     out = process_adcp.grid_data(ADCP, data, out, xaxis, yaxis)
-#     out = process_adcp.calc_bias(out, yaxis)
-#     ds = process_adcp.make_dataset(out)
+    ds_adcp = process_shear.process(adcp_path, data, options)
 
 
-# def test_wrapup_functions():
-#     profile_range = "160_to_210"
-#     glider_pqt_path = data_source.get_url(f"glider_profiles_{profile_range}.pqt")
-#     data_source.fetch(f"adcp_profiles_{profile_range}.nc")
-#     adcp_path = str(data_source.path / f"adcp_profiles_{profile_range}.nc")
-#     options = {
-#         "correctADCPHeading": True,
-#         "ADCP_discardFirstBins": 0,
-#         "ADCP_correlationThreshold": 70,
-#         "ADCP_amplitudeThreshold": 75,
-#         "ADCP_velocityThreshold": 0.8,
-#         "correctXshear": False,
-#         "correctYshear": False,
-#         "correctZshear": False,
-#         "correctZZshear": False,
-#         "ADCP_regrid_correlation_threshold": 20,
-#     }
-#     ADCP, data, options = process_adcp.load_adcp_glider_data(
-#         adcp_path, glider_pqt_path, options
-#     )
-#     ADCP, data = process_adcp.shear_from_adcp(adcp_path, glider_pqt_path, options=options)
-#     ds = process_adcp.grid_shear(ADCP, data)
-#     process_adcp.velocity_from_shear(adcp_path, glider_pqt_path, ADCP, data, options=options)
+    gps_predive = []
+    gps_postdive = []
+
+    dives = np.round(np.unique(data.dive_num))
+
+    _idx = np.arange(len(data.dead_reckoning.values))
+    dr = np.sign(np.gradient(data.dead_reckoning.values))
+
+    for dn in dives:
+        _gd = data.dive_num.values == dn
+        if all(np.unique(dr[_gd]) == 0):
+            continue
+
+        _post = -dr.copy()
+        _post[_post != 1] = np.nan
+        _post[~_gd] = np.nan
+
+        _pre = dr.copy()
+        _pre[_pre != 1] = np.nan
+        _pre[~_gd] = np.nan
+
+        if any(np.isfinite(_post)):
+            # The last -1 value is when deadreckoning is set to 0, ie. GPS fix. This is post-dive.
+            last  = int(np.nanmax(_idx * _post))
+            gps_postdive.append(np.array([data.time[last].values, data.longitude[last].values, data.latitude[last].values]))
+
+        if any(np.isfinite(_pre)):
+            # The first +1 value is when deadreckoning is set to 1, the index before that is the last GPS fix. This is pre-dive.
+            first = int(np.nanmin(_idx * _pre))-1 # Note the -1 here.
+            gps_predive.append(np.array([data.time[first].values, data.longitude[first].values, data.latitude[first].values]))
+
+    gps_predive = np.vstack(gps_predive)
+    gps_postdive = np.vstack(gps_postdive)
+
+
+
+    currents, DAC = process_currents.process(ds_adcp, gps_predive, gps_postdive, options)
+    bias_along_glider, bias_across_glider = process_bias.regress_bias(currents, options)
+
+    currents = process_bias.correct_bias(currents, options, bias_along_glider, bias_across_glider)

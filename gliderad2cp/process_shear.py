@@ -39,16 +39,13 @@ _rotate_XYZ_to_ENU
 
 import warnings
 from glob import glob
-
-import numpy as np
-from scipy.interpolate import interp1d
-
 import pandas as pd
+import numpy as np
+import datetime
 import xarray as xr
-
 import gsw
-
-from .tools import *
+from scipy.interpolate import interp1d
+from .tools import plog, interp, get_options
 
 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 warnings.filterwarnings(action='ignore', message='invalid value encountered in divide')
@@ -334,7 +331,7 @@ def _determine_velocity_measurement_depths(ADCP, options):
             np.cos(np.deg2rad(47.5 + P)) * np.cos(np.deg2rad(R))
         )
         theta_rad_4 = np.arccos(
-            np.cos(np.deg2rad(25 + R)) * np.cos(np.deg2rad(A))
+            np.cos(np.deg2rad(25 + R)) * np.cos(np.deg2rad(P))
         )
     else:
         direction = -1
