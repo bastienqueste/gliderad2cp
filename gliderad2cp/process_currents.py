@@ -108,9 +108,9 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     dxy_dvl =  np.full([r,2], np.nan) # x/y displacement in m, through water, for the dive calculated from ADCP as DVL
     
     ## Useful tidbits
-    pre_t  = gps_predive[:,0].astype('float') / 1e9 # s
-    post_t = gps_postdive[:,0].astype('float') / 1e9 # s
-    
+    pre_t = gps_predive[:, 0].astype('datetime64[s]').astype(np.float64) # s
+    post_t = gps_postdive[:, 0].astype('datetime64[s]').astype(np.float64) # s
+
     lon2m = lambda x, y : gsw.distance([x-0.0005, x + 0.0005], [y, y])*1000
     lat2m = lambda x, y : gsw.distance([x, x], [y-0.0005, y+0.0005])*1000
     
