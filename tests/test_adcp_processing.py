@@ -31,30 +31,20 @@ def test_process_currents():
     dives = np.round(np.unique(data.dive_num))
 
     _idx = np.arange(len(data.dead_reckoning.values))
-    dr = np.sign(np.gradient(data.dead_reckoning.values))
-
+    dr = np.ones(len(data.dead_reckoning.values))
     for dn in dives:
         _gd = data.dive_num.values == dn
-        if all(np.unique(dr[_gd]) == 0):
-            continue
-
-        _post = -dr.copy()
-        _post[_post != 1] = np.nan
+        _post = dr.copy()
         _post[~_gd] = np.nan
 
         _pre = dr.copy()
-        _pre[_pre != 1] = np.nan
         _pre[~_gd] = np.nan
 
-        if any(np.isfinite(_post)):
-            # The last -1 value is when deadreckoning is set to 0, ie. GPS fix. This is post-dive.
-            last  = int(np.nanmax(_idx * _post))
-            gps_postdive.append(np.array([data.time[last].to_datetime64(), data.longitude[last], data.latitude[last]]))
+        last  = int(np.nanmax(_idx * _post)) - 10
+        gps_postdive.append(np.array([data.time[last].to_datetime64(), data.longitude[last], data.latitude[last]]))
 
-        if any(np.isfinite(_pre)):
-            # The first +1 value is when deadreckoning is set to 1, the index before that is the last GPS fix. This is pre-dive.
-            first = int(np.nanmin(_idx * _pre))-1 # Note the -1 here.
-            gps_predive.append(np.array([data.time[first].to_datetime64(), data.longitude[first], data.latitude[first]]))
+        first = int(np.nanmin(_idx * _pre)) + 10
+        gps_predive.append(np.array([data.time[first].to_datetime64(), data.longitude[first], data.latitude[first]]))
 
     gps_predive = np.vstack(gps_predive)
     gps_postdive = np.vstack(gps_postdive)
