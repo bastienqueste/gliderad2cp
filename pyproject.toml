@@ -70,4 +70,7 @@ ignore = [
     "*.ipynb",
     "tests",
     "tests/*",
+    "*.png",
+    "*.bib",
+    "*.cff"
 ]
