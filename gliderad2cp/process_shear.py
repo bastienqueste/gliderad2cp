@@ -101,7 +101,7 @@ def load_data(adcp_file_path, glider_file_path, options):
         """
         if type(glider_file) is pd.core.frame.DataFrame:
             data = glider_file
-        if type(glider_file) is xr.core.dataset.Dataset:
+        elif type(glider_file) is xr.core.dataset.Dataset:
             data = glider_file.to_dataframe()
             if 'time' not in data:
                 data['time'] = data.index        
@@ -110,14 +110,21 @@ def load_data(adcp_file_path, glider_file_path, options):
                 data['profile_number'] = data['profile_index']
             if 'profile_num' in data:
                 data['profile_number'] = data['profile_num']
-                
-        
-        if str(glider_file)[-4:] == '.csv':
+        elif str(glider_file)[-4:] == '.csv':
             data = pd.read_table(glider_file, parse_dates=['time'])
-            
-        if str(glider_file)[-4:] == '.pqt':
+        elif str(glider_file)[-4:] == '.pqt':
             data = pd.read_parquet(glider_file)
-        
+        elif str(glider_file)[-3:] == '.nc':
+            data = xr.open_dataset(glider_file).to_dataframe()
+            if 'time' not in data:
+                data['time'] = data.index        
+            data['date_float'] = data['time'].values.astype('float')
+            if 'profile_index' in data:
+                data['profile_number'] = data['profile_index']
+            if 'profile_num' in data:
+                data['profile_number'] = data['profile_num']
+        else:
+            raise(ValueError(f"could not parse input dataset {glider_file}"))
         sel_cols = [
             'time',
             'temperature',
@@ -126,8 +133,10 @@ def load_data(adcp_file_path, glider_file_path, options):
             'longitude',
             'profile_number',
             'pressure',
+            'dive_num'
         ]
-        data = data[sel_cols]
+        valid_cols = list(set(list(data)).intersection(sel_cols))
+        data = data[valid_cols]
         time_ms = data.time.values
         if time_ms.dtype != '<M8[ns]':
             divisor = 1e3
