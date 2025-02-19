@@ -18,14 +18,14 @@ gliderad2cp can be installed with pip
 gliderad2cp requires 2 inputs:
 1. A netcdf (.nc) file of Nortek AD2CP data as output by the Nortek MIDAS post-processing software. This software should be procured from Nortek.
 2. Glider data in a timeseries dataset with the following variables:
-- "time"
-- "temperature"
-- "salinity"
-- "latitude"
-- "pressure"
-- "longitude"
-- "profile_number"
-- "declination"
+
+- time
+- pressure
+- temperature
+- salinity
+- latitude
+- longitude
+- profile_number
 
 ### Process shear
 

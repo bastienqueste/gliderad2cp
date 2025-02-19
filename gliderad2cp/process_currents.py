@@ -42,6 +42,8 @@ warnings.filterwarnings(action="ignore", message="Mean of empty slice")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in divide")
 warnings.filterwarnings(action="ignore", message="invalid value encountered in true_divide")
 warnings.filterwarnings(action="ignore", message="Degrees of freedom <= 0 for slice.")
+warnings.filterwarnings(action="ignore", message="All-NaN slice encountered")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 """
