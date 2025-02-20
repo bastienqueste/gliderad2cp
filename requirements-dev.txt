@@ -12,4 +12,5 @@ pyarrow
 pytest
 scipy
 sphinx
+sphinx-rtd-theme
 xarray

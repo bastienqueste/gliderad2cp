@@ -4,8 +4,8 @@ Compatible with any glider as long as the ADCP is returning data for the 4 beams
 TODO: make compatible with the 3-beam configuration.
 
 
-Functions
--------
+gliderad2cp.process_shear
+--------------------------
 process
     The main function which converts beam velocity data shear in the ENU directions.
 load_data
@@ -24,8 +24,10 @@ _rotate_XYZ_to_ENU
     Rotates velocity measurements in XYZ coordinates into ENU coordinates.
     
 
-.process() runs the following functions in this order
+Notes
 -------
+.process() runs the following functions in this order
+
 1. load_data
 2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
 3. _velocity_soundspeed_correction
@@ -668,8 +670,10 @@ def process(adcp_file_path, glider_file_path, options=None):
         xr.Dataset of the AD2CP netcdf with many supplemental variables, most importantly X, Y, Z and E, N, U velocities projected onto isobars to avoid shear smearing.
 
 
-    .process() runs the following functions in this order
+    Notes
     -------
+    .process() runs the following functions in this order
+
     1. load_data
     2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
     3. _velocity_soundspeed_correction

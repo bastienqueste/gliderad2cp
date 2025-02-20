@@ -1,5 +1,10 @@
-import pooch
+"""
+gliderad2cp.download_example_data
+-----------------------------------
+Functions for downloading sample datasets
+"""
 
+import pooch
 server = "https://erddap.observations.voiceoftheocean.org/examples/gliderad2cp/"
 data_source = pooch.create(
     path=pooch.os_cache("gliderad2cp"),

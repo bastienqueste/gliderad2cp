@@ -1,11 +1,15 @@
+"""
+gliderad2cp.tools
+--------------------------
+Helper funcitons for gliderad2cp
+"""
 import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime as dt
 from scipy.interpolate import interp1d
-"""
-Create default options structure for gliderAD2CP
-"""
+
+
 def get_options(verbose=True, **kwargs):
     """
     Returns a dictionary containing options compatible with gliderAD2CP.
