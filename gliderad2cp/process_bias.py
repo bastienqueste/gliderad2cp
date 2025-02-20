@@ -13,8 +13,8 @@ Preliminary work indicates that shear bias is instrument-velocity dependent, but
 non-default correction. NB: the author of this code uses this one all the time.
 
 
-Functions
--------
+gliderad2cp.process_bias
+--------------------------
 process
     The main function which will run through the whole shear bias correction automatically for you.
 visualise
@@ -25,9 +25,11 @@ correct_bias
     Outputs DAC-referenced velocities that have been corrected for shear bias.
 __linear_regression
     A weighted, linear least squares regression function with optional plotting and indexing capability.
-    
-.process() runs the following functions in this order
+
+Notes
 -------
+.process() runs the following functions in this order
+
 1. visualise
 2. regress_bias
 3. correct_bias
@@ -356,8 +358,10 @@ def process(currents, options):
         Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, and unreferenced velocity profiles.
         
 
-    .process() runs the following functions in this order
+    Notes
     -------
+    .process() runs the following functions in this order
+    
     1. visualise
     2. regress_bias
     3. correct_bias

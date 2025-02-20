@@ -137,24 +137,13 @@ These reference horizontal and vertical velocities can be obtained from several 
 
 
 
-
-
-
-Example processing notebook
-=============================
-
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 3
    :caption: Contents:
 
    example_processing
+   gliderad2cp
 
-
-API Documentation
-==========================
-
-.. automodule:: gliderad2cp.process_adcp
-   :members:
 
 Indices and tables
 ==================
