@@ -318,7 +318,7 @@ def _grid_velocity(currents, method='integrate'):
 
 def _reference_velocity(currents, DAC):
     """
-    Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    Reference vertical velocity profiles to dive-averaged currents, paying attention to the time spent at each depth.
     This ensures that dives with irregular vertical speeds or periods of loitering at depth are still reproduced correctly.
     As a result, one cannot expect the *depth*-averaged velocity of a dive to match the *dive*-averaged currents.
 
@@ -402,7 +402,7 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
     1. get_DAC - Calculate dive-averaged currents using the ADCP as a DVL.
     2. _grid_shear - Grid shear according to specifications.
     3. _grid_velocity - Assemble shear measurements to reconstruct velocity profiles.
-    4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attention to the time spent at each depth.
     
     """
     # Load default options if not present.

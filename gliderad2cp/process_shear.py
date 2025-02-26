@@ -673,16 +673,14 @@ def process(adcp_file_path, glider_file_path, options=None):
     Notes
     -------
     .process() runs the following functions in this order
-
-    1. load_data
+    1. load_data - load data from a Nortek AD2CP netCDF file and a glider data file or dataset
     2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
-    3. _velocity_soundspeed_correction
-    4. _quality_control_velocities
-    5. _determine_velocity_measurement_depths 
-    6. _regrid_beam_velocities_to_isobars
-    7. _rotate_BEAMS_to_XYZ
-    8. _rotate_XYZ_to_ENU
-  
+    3. _velocity_soundspeed_correction- Corrects along beam velocity data for lack of salinity measurements in ADCP default soundspeed settings.
+    4. _quality_control_velocities -  Removes bad velocity measurements based on velocity, amplitude and correlation criteria defined in options
+    5. _determine_velocity_measurement_depths - Determines what depth each velocity measurement was taken at for each beam, account for glider attitude
+    6. _regrid_beam_velocities_to_isobars -  Regrids beam velocities onto isobars to avoid shear smearing in the final shear data
+    7. _rotate_BEAMS_to_XYZ -  Coordinate transform that converts BEAM velocities to glider relative velocities X, Y, Z
+    8. _rotate_XYZ_to_ENU - Coordinate transform that converts velocity estimates relative to the glider (X, Y, Z) into the earth relative reference frame east, north, up (ENU)
     """
     # Load default options if not present.
     if not options:

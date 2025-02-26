@@ -290,7 +290,7 @@ def regress_bias(currents,options):
     
 def correct_bias(currents, options, bias_along_glider, bias_across_glider):
     """
-    Calculates the articifial velocity profile created by the shear bias and outputs two new variables:
+    Calculates the artificial velocity profile created by the shear bias and outputs two new variables:
         "velocity_{direction}_DAC_reference_sb_corrected" - DAC referenced, shear-bias corrected velocity profiles.
         "shear_bias_velocity_{direction}" - the velocity profile error induced by the shear bias.
     
@@ -362,10 +362,10 @@ def process(currents, options):
     -------
     .process() runs the following functions in this order
     
-    1. visualise
-    2. regress_bias
-    3. correct_bias
-    4. visualise
+    1. visualise -  Produce collection of plots used to visalise estimated shear bias
+    2. regress_bias - Determine shear bias correction coefficients by empirically minimimising the slope of various linear regressions
+    3. correct_bias -  Calculate the artificial velocity profile created by the shear bias and correct it in a new variable
+    4. visualise - Produce collection of plots used to visalise estimated shear bias after correction
 
     """
     
