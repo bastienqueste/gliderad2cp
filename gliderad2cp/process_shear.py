@@ -4,8 +4,8 @@ Compatible with any glider as long as the ADCP is returning data for the 4 beams
 TODO: make compatible with the 3-beam configuration.
 
 
-Functions
--------
+gliderad2cp.process_shear
+--------------------------
 process
     The main function which converts beam velocity data shear in the ENU directions.
 load_data
@@ -24,8 +24,10 @@ _rotate_XYZ_to_ENU
     Rotates velocity measurements in XYZ coordinates into ENU coordinates.
     
 
-.process() runs the following functions in this order
+Notes
 -------
+.process() runs the following functions in this order
+
 1. load_data
 2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
 3. _velocity_soundspeed_correction
@@ -668,17 +670,17 @@ def process(adcp_file_path, glider_file_path, options=None):
         xr.Dataset of the AD2CP netcdf with many supplemental variables, most importantly X, Y, Z and E, N, U velocities projected onto isobars to avoid shear smearing.
 
 
-    .process() runs the following functions in this order
+    Notes
     -------
-    1. load_data
+    .process() runs the following functions in this order
+    1. load_data - load data from a Nortek AD2CP netCDF file and a glider data file or dataset
     2. (correct_heading - Awaiting publication, contact Bastien Queste for access)
-    3. _velocity_soundspeed_correction
-    4. _quality_control_velocities
-    5. _determine_velocity_measurement_depths 
-    6. _regrid_beam_velocities_to_isobars
-    7. _rotate_BEAMS_to_XYZ
-    8. _rotate_XYZ_to_ENU
-  
+    3. _velocity_soundspeed_correction- Corrects along beam velocity data for lack of salinity measurements in ADCP default soundspeed settings.
+    4. _quality_control_velocities -  Removes bad velocity measurements based on velocity, amplitude and correlation criteria defined in options
+    5. _determine_velocity_measurement_depths - Determines what depth each velocity measurement was taken at for each beam, account for glider attitude
+    6. _regrid_beam_velocities_to_isobars -  Regrids beam velocities onto isobars to avoid shear smearing in the final shear data
+    7. _rotate_BEAMS_to_XYZ -  Coordinate transform that converts BEAM velocities to glider relative velocities X, Y, Z
+    8. _rotate_XYZ_to_ENU - Coordinate transform that converts velocity estimates relative to the glider (X, Y, Z) into the earth relative reference frame east, north, up (ENU)
     """
     # Load default options if not present.
     if not options:

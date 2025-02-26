@@ -4,8 +4,8 @@ This functionality can handle loiter dives and irregular profiles but it require
 always on so that DAC is representative of the baroclinic profile collected by the ADCP.
 
 
-Functions
--------
+gliderad2cp.process_currents
+------------------------------
 process
     The main function which converts shear data from gliderAD2CP.process_shear.process() to referenced velocities.
 get_DAC
@@ -17,17 +17,20 @@ _grid_velocity
 _reference_velocity
     Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
     
-    
-.process() runs the following functions in this order
+Notes
 -------
+.process() runs the following functions in this order
+
 1. get_DAC - Calculate dive-averaged currents using the ADCP as a DVL.
 2. _grid_shear - Grid shear according to specifications.
 3. _grid_velocity - Assemble shear measurements to reconstruct velocity profiles.
 4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
 
 (Optional steps:) - Not coded up yet
-(5. assess_shear_bias) - Not coded up yet
-(6. correct_shear_bias) - Not coded up yet.
+
+5. assess_shear_bias - Not coded up yet
+6. correct_shear_bias - Not coded up yet.
+
 """
 
 import numpy as np
@@ -315,7 +318,7 @@ def _grid_velocity(currents, method='integrate'):
 
 def _reference_velocity(currents, DAC):
     """
-    Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    Reference vertical velocity profiles to dive-averaged currents, paying attention to the time spent at each depth.
     This ensures that dives with irregular vertical speeds or periods of loitering at depth are still reproduced correctly.
     As a result, one cannot expect the *depth*-averaged velocity of a dive to match the *dive*-averaged currents.
 
@@ -392,13 +395,14 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
     currents : xr.Dataset
         Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, unreferenced velocity profiles and DAC-referenced velocities.
 
-
+    Notes
+    ------
     .process() runs the following functions in this order
-    -------
+
     1. get_DAC - Calculate dive-averaged currents using the ADCP as a DVL.
     2. _grid_shear - Grid shear according to specifications.
     3. _grid_velocity - Assemble shear measurements to reconstruct velocity profiles.
-    4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attenting to the time spent at each depth.
+    4. _reference_velocity - Reference vertical velocity profiles to dive-averaged currents, paying attention to the time spent at each depth.
     
     """
     # Load default options if not present.
