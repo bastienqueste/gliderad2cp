@@ -94,11 +94,15 @@ and use of different bins (in green on the right) to minimise shear smearing.
 Step 2. Process velocities
 --------------------------
 
+Prerequisite: Get pre and post dive GPS locations from glider data
+
+To calculate dive average current we require more variables, including estimates of the glider's movement through the water. For this, we need the pre and post dive GPS locations of the glider. This calculation varies between glider models, processing tools and glider firmware versions. See the documentation for more examples of this calculation and make use of the verification plots. You can also provide your own input table of pre and post dive GPS locations and times.
+
+An worked example is provided in the notebook, showing GPS location calculation from a 2024 SeaExplorer dataset. More examples can be found in the section :ref:`gps-calculations`.
+
 Vertical shear of horizontal velocities is calculated by gridded the ENU relative velocities into vertical bins. These vertical velocities of shear can then be integrated into velocity profiles.
 
 ``process_currents.process()`` executes the following functions in order
-
-
 
 1. ``get_DAC`` - Calculate dive-averaged currents using the ADCP as a DVL.
 
@@ -131,6 +135,75 @@ Step 3. Correct for shear bias
 4. ``visualise`` - Produce collection of plots used to visalise estimated shear bias after correction
 
 All of these steps are demonstrated in the example notebook below.
+
+.. _gps-calculations:
+
+GPS calculations
+--------------------------
+
+Example calculation for more recent SeaExplorer gliders (post 2023 firmware)::
+
+   data = xr.open_dataset(data_file)
+   gps_predive = []
+   gps_postdive = []
+
+   dives = np.round(np.unique(data.dive_num))
+
+   _idx = np.arange(len(data.dead_reckoning.values))
+   dr  = np.sign(np.gradient(data.dead_reckoning.values))
+
+   for dn in dives:
+      _gd = data.dive_num.values == dn
+      if all(np.unique(dr[_gd]) == 0):
+         continue
+
+      _post = -dr.copy()
+      _post[_post != 1] = np.nan
+      _post[~_gd] = np.nan
+
+      _pre = dr.copy()
+      _pre[_pre != 1] = np.nan
+      _pre[~_gd] = np.nan
+
+      if any(np.isfinite(_post)):
+         # The last -1 value is when deadreckoning is set to 0, ie. GPS fix. This is post-dive.
+         last  = int(np.nanmax(_idx * _post))
+         gps_postdive.append(np.array([data.time[last].values, data.longitude[last].values, data.latitude[last].values]))
+
+      if any(np.isfinite(_pre)):
+         # The first +1 value is when deadreckoning is set to 1, the index before that is the last GPS fix. This is pre-dive.
+         first = int(np.nanmin(_idx * _pre))-1 # Note the -1 here.
+         gps_predive.append(np.array([data.time[first].values, data.longitude[first].values, data.latitude[first].values]))
+
+   gps_predive = np.vstack(gps_predive)
+   gps_postdive = np.vstack(gps_postdive)
+
+Example calculation for more older SeaExplorer gliders (post 2023 firmware)::
+
+    gps_predive = []
+    gps_postdive = []
+
+    dives = np.round(np.unique(data.dive_num))
+
+    _idx = np.arange(len(data.dead_reckoning.values))
+    for dn in tqdm(dives):
+        _dn = data.dive_num.values == dn
+        _dr = data.dead_reckoning.values == 0
+        _gd = (_dn & _dr).astype('float')
+        _gd[_gd < 1] = np.NaN
+
+        if all(np.isnan(_gd)):
+            continue
+
+        first = int(np.nanmin(_idx * _gd))
+        last  = int(np.nanmax(_idx * _gd))
+
+        gps_postdive.append(np.array([data.time.values[first], data.longitude.values[first], data.latitude.values[first]]))
+        gps_predive.append(np.array([data.time.values[last], data.longitude.values[last], data.latitude.values[last]]))
+
+    gps_predive = np.vstack(gps_predive)
+    gps_postdive = np.vstack(gps_postdive)
+
 
 
 .. toctree::
