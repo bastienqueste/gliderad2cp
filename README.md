@@ -59,7 +59,9 @@ process_bias.process(currents)
 ```
 
 ### Additional options
-By default, the following options are used during processing:
+Several options are available to fine tune the processing.
+
+By default, the first of each option is used during processing. unless otherwise specified.
 
 ```python
     {correct_compass_calibration : [False, 'compass correction algorithm is awaiting publication and will be added upon acceptance. Contact Bastien Queste if you require.'],
