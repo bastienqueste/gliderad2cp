@@ -2,6 +2,10 @@ include *.txt
 include *.md
 include pyproject.toml
 
+include *.bib
+include *.cff
+recursive-include paper_figures *.png
+
 graft gliderad2cp
 
 prune docs
