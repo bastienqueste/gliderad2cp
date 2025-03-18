@@ -31,12 +31,10 @@ affiliations:
  - name: Voice of the Ocean Foundation, Skeppet Ärans väg 19, 426 71 Västra Frölunda, Sweden 
    index: 2
 
-date: 27 November 2024
+date: 17 March 2025
 
 bibliography: paper.bib
 ---
-
-Suggested reviewers: Laur Ferris, AnthonyBosse, Clark Richards, Robert Todd
 
 # Summary
 
@@ -44,7 +42,7 @@ Oceanographers routinely measure ocean currents to understand and map the transp
 
 ![The lowered ADCP method combines successive short profiles of vertical shear to recover the shape of the full depth velocity porofile.\label{fig:ladcp}](paper_figures/lADCP.png)
 
-Ocean gliders are small, low power, autonomous underwater vehicles which profile up and down in the water column, collecting measurements of ocean properties throughout. Ocean gliders now have the ability to carry small ADCPs such as the Nortek Glider AD2CP, with 4 beams and a frequency of 1MHz. The high frequency means that the sensor can only effectively measure currents up to approximately 15 m away from the glider; however as the glider travels up and down through the water column, coverage is possible down to the glider's full depth (typically 1000 m). The key difficulty arises as the ADCP measures ocean currents relative to the glider, rather than relative to ground. As the glider's velocity is often more than an order of magnitude greater than ocean current velocities, a different form of processing is required. We combine shear measurements (how ocean currents change in the vertical over small scales) from multiple successive short velocity profiles to build a full water-column shear profile. We then vertically integrate and reference the shear profile to obtain an absolute velocity profile. This is known as the lowered ADCP method (Fig. \autoref{fig:ladcp}). 
+Ocean gliders are small, low power, autonomous underwater vehicles which profile up and down in the water column, collecting measurements of ocean properties throughout. Ocean gliders now have the ability to carry small ADCPs such as the Nortek Glider AD2CP, with 4 beams and a frequency of 1MHz. The high frequency means that the sensor can only measure currents up to approximately 30~m away from the glider (although 15~m is more realistic in open ocean conditions); however as the glider travels up and down through the water column, coverage is possible down to the glider's full depth (typically 1000 m). The key difficulty arises as the ADCP measures ocean currents relative to the glider, rather than relative to ground. As the glider's velocity is often more than an order of magnitude greater than ocean current velocities, a different form of processing is required. We combine shear measurements (how ocean currents change in the vertical over small scales) from multiple successive short velocity profiles to build a full water-column shear profile. We then vertically integrate and reference the shear profile to obtain an absolute velocity profile. This is known as the lowered ADCP method (Fig. \autoref{fig:ladcp}). 
 
 ![The Nortek AD2CP measurements are time-gated at the same intervals for each individual beam, meaning that the relation between echo delay and measurement range is the same for all 4 beams and does not account for the more open front and back beam angles. The purpose is to have 3 beams at equal angles from vertical when the glider is diving at the correct angle (17.4$^\circ$ from horizontal for the Nortek AD2CP; in grey on the left). If the glider is flying at a different angle, there will be a mismatch in depth between the 3 beams (in gray on the right) which requires regridding and use of different bins (in green on the right) to minimise shear smearing.\label{fig:regridding}](paper_figures/regridding.png)
 
@@ -61,7 +59,7 @@ This toolbox collects successive measurements of ocean currents as the glider pr
 
 5. Determine the mean ocean current over the period of the glider dive by comparing ADCP-derived glider speed through water to its GPS-derived speed over land, the difference being caused by ocean currents.
 
-6. Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference. Simple gridding and integrating of shear is used rather than the inverse method due to the use of a single constraint [@visbeck:2002].
+6. Reconstruct full-depth profiles of vertical shear from the successive low-range measurements to small scale relative changes in ocean currents, but lacking an absolute reference. Simple gridding and integrating of shear is used as default rather than the inverse method due to the use of a single constraint [@visbeck:2002].
 
 7. Reference the full high-resolution vertical shear profile using the glider's dive-averaged current to provide a high-resolution absolute measurements of ocean currents. Referencing of baroclinic profiles accounts for time spent at each depth to be compatible with repeat dives without surfacing or long glider loiters.
 
