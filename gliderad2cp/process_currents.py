@@ -176,6 +176,10 @@ def _grid_shear(ADCP, options, xi, yi):
     # Create structure
     currents = xr.Dataset(coords={"depth": yi, "profile_index": xi})
     
+    currents["depth"].attrs = {"units": 'm', 'description': 'Central measurement depth in meters.'}
+    currents["profile_index"].attrs = {"units": '', 'description': 'Central profile number of measurement.'}
+    
+    
     # Get coords for gridding function below in the right dimensions
     x, y = xr.broadcast(ADCP.profile_number, ADCP.bin_depth)
     t, _ = xr.broadcast(ADCP.time, ADCP.bin_depth)
@@ -209,6 +213,7 @@ def _grid_shear(ADCP, options, xi, yi):
                                  duration,
                                  xi=xi, yi=yi, fn=np.nansum)[0]
                               )
+    currents['time_in_bin'].attrs = {"units": 's', 'description': 'Cumulative time spent by the glider in this depth x profile bin.'}
 
     # Gridding function for shear
     plog(f'    Gridding flight metrics.')
@@ -220,46 +225,34 @@ def _grid_shear(ADCP, options, xi, yi):
     currents['heading_N'] = (('depth', 'profile_index'),
                        grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
                          ADCP.Heading.values + options['heading_offset'],
-                         xi=xi, yi=yi, fn=cos_mean)[0]
+                         xi=xi, yi=yi, fn=cos_mean)[0],
+                       {"units": '', 'description': 'N-ward cartesian component of heading.'}
                       )
     currents['heading_E'] = (('depth', 'profile_index'),
                            grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
                              ADCP.Heading.values + options['heading_offset'],
-                             xi=xi, yi=yi, fn=sin_mean)[0]
+                             xi=xi, yi=yi, fn=sin_mean)[0],
+                           {"units": '', 'description': 'E-ward cartesian component of heading.'}
                           )
     currents['speed_through_water'] = (('depth', 'profile_index'),
                            grid2d(ADCP.profile_number.values, ADCP.Depth.values, 
                              np.sqrt(ADCP.X.mean(dim='gridded_bin')**2 +ADCP.Y.mean(dim='gridded_bin')**2 +ADCP.Z.mean(dim='gridded_bin')**2),
-                             xi=xi, yi=yi, fn=np.nanmean)[0]
+                             xi=xi, yi=yi, fn=np.nanmean)[0],
+                           {"units": 'm.s-1', 'description': 'Glider speed through water, estimated using the ADCP as a doppler velocity logger.'}
                           )
     
     # Grid shear data and metrics
     plog(f'    Gridding eastward shear metrics.')
-    currents['shear_E_mean'] = (('depth', 'profile_index'),   grid('Sh_E', np.nanmean))
-    currents['shear_E_median'] = (('depth', 'profile_index'), grid('Sh_E', np.nanmedian))
-    currents['shear_E_stddev'] = (('depth', 'profile_index'), grid('Sh_E', np.nanstd))
-    currents['shear_E_count'] = (('depth', 'profile_index'),  grid('Sh_E', count_valid))
+    currents['shear_E_mean'] = (('depth', 'profile_index'),   grid('Sh_E', np.nanmean),     {"units": 's-1', 'description': 'Mean shear in the E-direction.'})
+    currents['shear_E_median'] = (('depth', 'profile_index'), grid('Sh_E', np.nanmedian),   {"units": 's-1', 'description': 'Median shear in the E-direction.'})
+    currents['shear_E_stddev'] = (('depth', 'profile_index'), grid('Sh_E', np.nanstd),      {"units": 's-1', 'description': 'Std. dev. of shear in the E-direction.'})
+    currents['shear_E_count'] = (('depth', 'profile_index'),  grid('Sh_E', count_valid),    {"units": '', 'description': 'Number of valid shear measurements in the E-direction.'})
 
     plog(f'    Gridding northward shear metrics.')
-    currents['shear_N_mean'] = (('depth', 'profile_index'),   grid('Sh_N', np.nanmean))
-    currents['shear_N_median'] = (('depth', 'profile_index'), grid('Sh_N', np.nanmedian))
-    currents['shear_N_stddev'] = (('depth', 'profile_index'), grid('Sh_N', np.nanstd))
-    currents['shear_N_count'] = (('depth', 'profile_index'),  grid('Sh_N', count_valid))
-
-    plog(f'    Calculating standard error as percentage of shear.')
-    currents['shear_E_pct_error'] = np.abs(
-        100 * 
-        currents.shear_E_stddev / 
-        np.sqrt(currents.shear_E_count)
-        / currents.shear_E_mean
-    )
-
-    currents['shear_N_pct_error'] = np.abs(
-        100 * 
-        currents.shear_N_stddev / 
-        np.sqrt(currents.shear_N_count)
-        / currents.shear_N_mean
-    )
+    currents['shear_N_mean'] = (('depth', 'profile_index'),   grid('Sh_N', np.nanmean),     {"units": 's-1', 'description': 'Mean shear in the N-direction.'})
+    currents['shear_N_median'] = (('depth', 'profile_index'), grid('Sh_N', np.nanmedian),   {"units": 's-1', 'description': 'Median shear in the N-direction.'})
+    currents['shear_N_stddev'] = (('depth', 'profile_index'), grid('Sh_N', np.nanstd),      {"units": 's-1', 'description': 'Std. dev. of shear in the N-direction.'})
+    currents['shear_N_count'] = (('depth', 'profile_index'),  grid('Sh_N', count_valid),    {"units": '', 'description': 'Number of valid shear measurements in the N-direction.'})
     
     return currents
 
@@ -298,8 +291,8 @@ def _grid_velocity(currents, method='integrate'):
                 np.nanmean(V, axis=0), (np.shape(V)[0], 1)
             )  # Make mean of baroclinic profiles equal to 0
             return V        
-        currents['velocity_E_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_E_median.values))
-        currents['velocity_N_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_N_median.values))
+        currents['velocity_E_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_E_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the E direction.'})
+        currents['velocity_N_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_N_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the N direction.'})
     def __lsq():
         # Space for Martin Visbeck's least squared method
         return False
@@ -362,6 +355,12 @@ def _reference_velocity(currents, DAC):
         currents[f'reference_{direction}_from_DAC'] = ('profile_index', reference)
 
         currents[f'velocity_{direction}_DAC_reference'] = currents[f'velocity_{direction}_no_reference'] + currents[f'reference_{direction}_from_DAC']
+        
+        
+        currents[f'DAC_{direction}'].attrs = {"units": 'm.s-1', 'description': f'Dive-averaged currents in the {direction} direction.'}
+        currents[f'displacement_though_water_{direction}'].attrs = {"units": 'm', 'description': f'Glider trajectory through water in the {direction} direction since mission start.'}
+        currents[f'reference_{direction}_from_DAC'].attrs = {"units": 'm.s-1', 'description': f'Reference velocity to correct unreferenced velocity profile; weighted by time-in-bin to account for loiters and uneven dives. In the {direction} direction.'}
+        currents[f'velocity_{direction}_DAC_reference'].attrs = {"units": 'm.s-1', 'description': f'DAC-referenced velocity profile in the {direction} direction.'}
 
     return currents
 
