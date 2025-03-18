@@ -180,14 +180,17 @@ def load_data(adcp_file_path, glider_file_path, options):
     # Coordinates
     ADCP = ADCP.assign_coords(Latitude  = ('time', interp(glider_time_float, glider_data['latitude'], adcp_time_float)))
     ADCP = ADCP.assign_coords(Longitude = ('time',interp(glider_time_float, glider_data['longitude'], adcp_time_float)))
+    
+    ADCP['Latitude'].attrs = {"units": 'Decimal degrees', 'description': f'Latitude from glider data.'}
+    ADCP['Longitude'].attrs = {"units": 'Decimal degrees', 'description': f'Longitude from glider data.'}
 
     # Profile and depth
     ADCP = ADCP.assign_coords(profile_number=('time', np.round(interp(glider_time_float, glider_data['profile_number'], adcp_time_float))))
     ADCP = ADCP.assign_coords(Depth=('time', -gsw.z_from_p(ADCP['Pressure'].values, ADCP['Latitude'].values)) )
     
-    ADCP['glider_soundspeed'] = ('time', interp(glider_time_float, glider_data['soundspeed'], adcp_time_float) )
-    ADCP['glider_salinity'] = ('time', interp(glider_time_float, glider_data['salinity'], adcp_time_float) )
-    ADCP['glider_temperature'] = ('time', interp(glider_time_float, glider_data['temperature'], adcp_time_float) )
+    ADCP['glider_soundspeed'] = ('time', interp(glider_time_float, glider_data['soundspeed'], adcp_time_float) , {"units": 'm.s-1', 'description': f'Sound velocity in water from glider data.'})
+    ADCP['glider_salinity'] = ('time', interp(glider_time_float, glider_data['salinity'], adcp_time_float) , {"units": 'PSU', 'description': f'Practical salinity from glider data.'})
+    ADCP['glider_temperature'] = ('time', interp(glider_time_float, glider_data['temperature'], adcp_time_float) , {"units": 'degrees C', 'description': f'ITS-90 temperature from glider data.'})
 
     # Get rid of pointless dimensions and make them coordinates instead
     ADCP = ADCP.assign_coords( bin=('Velocity Range', np.arange(len(ADCP['Velocity Range'].values)) ) )
@@ -388,6 +391,7 @@ def _determine_velocity_measurement_depths(ADCP, options):
         - direction
         * np.tile(z_bin_distance, (len(ADCP.time), 1))
         * np.tile(np.cos(theta_rad_1), (len(ADCP.bin), 1)).T,
+        {"units": 'm', 'description': f'Depth of measurement cell along beam 1.'}
     )
     ADCP['D2'] = (
         ['time', 'bin'],
@@ -395,6 +399,7 @@ def _determine_velocity_measurement_depths(ADCP, options):
         - direction
         * np.tile(z_bin_distance, (len(ADCP.time), 1))
         * np.tile(np.cos(theta_rad_2), (len(ADCP.bin), 1)).T,
+        {"units": 'm', 'description': f'Depth of measurement cell along beam 2.'}
     )
     ADCP['D3'] = (
         ['time', 'bin'],
@@ -402,6 +407,7 @@ def _determine_velocity_measurement_depths(ADCP, options):
         - direction
         * np.tile(z_bin_distance, (len(ADCP.time), 1))
         * np.tile(np.cos(theta_rad_3), (len(ADCP.bin), 1)).T,
+        {"units": 'm', 'description': f'Depth of measurement cell along beam 3.'}
     )
     ADCP['D4'] = (
         ['time', 'bin'],
@@ -409,6 +415,7 @@ def _determine_velocity_measurement_depths(ADCP, options):
         - direction
         * np.tile(z_bin_distance, (len(ADCP.time), 1))
         * np.tile(np.cos(theta_rad_4), (len(ADCP.bin), 1)).T,
+        {"units": 'm', 'description': f'Depth of measurement cell along beam 3.'}
     )
     
     return ADCP
@@ -476,6 +483,8 @@ def _regrid_beam_velocities_to_isobars(ADCP, options):
             vectorize=True,
             output_sizes={'gridded_bin': len(depth_offsets)},
         )
+        
+        ADCP['V' + beam].attrs = {"units": 'm.s-1', 'description': f'Velocity along beam {beam}, after interpolating onto isobars.'}
 
     ADCP = ADCP.assign_coords({'depth_offset': (['gridded_bin'], depth_offsets)})
     ADCP = ADCP.assign_coords(
@@ -486,6 +495,7 @@ def _regrid_beam_velocities_to_isobars(ADCP, options):
                     ADCP['Depth'].values.astype('float'), (len(ADCP.gridded_bin), 1)
                 ).T
                 - np.tile(depth_offsets, (len(ADCP.time), 1)),
+                {"units": 'm', 'description': f'Measurement depth.'}
             )
         }
     )
@@ -553,9 +563,9 @@ def _rotate_BEAMS_to_XYZ(ADCP, options):
     Y = -c * a(ts) * V2 + c * a(ts) * V4  # TODO: sign uncertainty here
     Z = 2 * b(ts) * V2 + 2 * b(ts) * V4
 
-    ADCP['X'] = (['time', 'gridded_bin'], X)
-    ADCP['Y'] = (['time', 'gridded_bin'], Y)
-    ADCP['Z'] = (['time', 'gridded_bin'], Z)
+    ADCP['X'] = (['time', 'gridded_bin'], X, {"units": 'm.s-1', 'description': f'Velocity along the ADCP\'s X direction.'})
+    ADCP['Y'] = (['time', 'gridded_bin'], Y, {"units": 'm.s-1', 'description': f'Velocity along the ADCP\'s Y direction.'})
+    ADCP['Z'] = (['time', 'gridded_bin'], Z, {"units": 'm.s-1', 'description': f'Velocity along the ADCP\'s Z direction.'})
 
     return ADCP
 
@@ -643,6 +653,13 @@ def _rotate_XYZ_to_ENU(ADCP, options):
         ['time', 'gridded_bin'],
         ADCP['U'].differentiate('gridded_bin').values,
     )
+    
+    ADCP['E'].attrs = {"units": 'm.s-1', 'description': f'Raw velocity along the E direction, including the glider\'s velocity through water.'}
+    ADCP['N'].attrs = {"units": 'm.s-1', 'description': f'Raw velocity along the N direction, including the glider\'s velocity through water.'}
+    ADCP['U'].attrs = {"units": 'm.s-1', 'description': f'Raw velocity along the U direction, including the glider\'s velocity through water.'}
+    ADCP['Sh_E'].attrs = {"units": 's-1', 'description': f'Shear in the E direction.'}
+    ADCP['Sh_N'].attrs = {"units": 's-1', 'description': f'Shear in the N direction.'}
+    ADCP['Sh_U'].attrs = {"units": 's-1', 'description': f'Shear in the U direction.'}
     return ADCP
 
 

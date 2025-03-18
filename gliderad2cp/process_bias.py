@@ -322,9 +322,13 @@ def correct_bias(currents, options, bias_along_glider, bias_across_glider):
         currents['shear_bias_velocity_N'] =  ((currents.heading_N*bias_along_glider - currents.heading_E*bias_across_glider) * currents.depth.differentiate('depth')).cumsum('depth') * mask
     
     directions = ['N','E']
+    
     for l in directions:
         currents[f'shear_bias_velocity_{l}'] = currents[f'shear_bias_velocity_{l}'] - currents[f'shear_bias_velocity_{l}'].mean(dim='depth')        
         currents[f'velocity_{l}_DAC_reference_sb_corrected'] = currents[f'velocity_{l}_DAC_reference'] - currents[f'shear_bias_velocity_{l}']
+    
+        currents[f'shear_bias_velocity_{l}'].attrs = {"units": 'm.s-1', 'description': f'Erroneous velocity induced by shear-bias in the {l} direction.'}
+        currents[f'velocity_{l}_DAC_reference_sb_corrected'].attrs = {"units": 'm.s-1', 'description': f'DAC-referenced and shear-bias corrected, velocity profile in the {l} direction.'}
     
     return currents
 
