@@ -48,6 +48,7 @@ import xarray as xr
 import gsw
 from scipy.interpolate import interp1d
 from .tools import plog, interp, get_options
+from . import process_compass
 
 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 warnings.filterwarnings(action='ignore', message='invalid value encountered in divide')
@@ -717,8 +718,9 @@ def process(adcp_file_path, glider_file_path, options=None):
     
     # Correct heading based on magnetometer data.
     # Option to be implemented after publication of methods paper. Contact Bastien Queste for details.
-    # if options['correct_compass_calibration']:   
-    #     ADCP = correct_heading(ADCP, options)
+    if options['correct_compass_calibration']:   
+        ADCP = process_compass.correct_heading(ADCP, options)
+    ADCP = process_compass.add_declination(ADCP)
     
     # Correct data for soundspeed and quality control based on correlation, amplitude and velocity.
     ADCP = _velocity_soundspeed_correction(ADCP)
