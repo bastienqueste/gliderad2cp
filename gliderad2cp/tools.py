@@ -16,8 +16,8 @@ def get_options(verbose=True, **kwargs):
     Run with no kwargs to output a default dictionary, or with kwargs to return a full dictionary with the chose options
     """
     options = {
+        'current_profile_method' : ['lsq_inversion','shear_integration'],
         'correct_compass_calibration' : [False, 'compass correction algorithm is awaiting publication and will be added upon acceptance. Contact Bastien Queste if you require.'],
-        'shear_to_velocity_method' : ['integrate',],
         'ADCP_mounting_direction' : ['auto', 'top', 'bottom'],
         'QC_correlation_threshold' : [80, 'minimum acceptable along-beam correlation value.'],
         'QC_amplitude_threshold' : [80, 'maximum acceptable along-beam amplitude.'],
@@ -32,6 +32,8 @@ def get_options(verbose=True, **kwargs):
         'pitch_offset' : [0, 'value to be added to pitch to correct for transducer-compass misalignment'],
         'roll_offset' : [0, 'value to be added to roll to correct for transducer-compass misalignment'],
         'heading_offset' : [0, 'value to be added to heading to correct for transducer-compass misalignment'],
+        'lsq_inversion_smoothing' : [0, 'TODO: JGRADONE add description'],
+        'lsq_inversion_weighting' : [0, 'TODO: JGRADONE add description'],
         }
         
     default = dict()

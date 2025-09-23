@@ -364,6 +364,37 @@ def _reference_velocity(currents, DAC):
 
     return currents
 
+def _lsq_inversion(ADCP, DAC, options, xi, yi):
+    """
+    Perform Joe Gradone's implementation of the least squared inversion based on Todd et al. (2017...??). 
+    Currently uses DAC only as a constraint, but will be supplemented with ability to integrate surface drift and bottom track down the line....
+    
+
+    Inputs
+    ----------
+    ADCP : xarray.Dataframe
+        Output from the gliderAD2CP.process_shear() function.
+    DAC : dictionary containing fields :
+        dac : 
+            Mx2 np.array containing eastward DAC (column 0) and northward DAC (column 1), for M dives identified.
+        dive_time : 
+            Mx1 np.array containing mean time for the dive in np.datetime64[ns] format.
+    options : dict
+        Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
+    xi : numpy.array
+        Array of bins in x-axis.
+    yi : numpy.array
+        Array of bins in y-axis.
+         
+    Outputs
+    -------
+    currents : xr.Dataset
+        Dataset containing gridded shear and various statistical metrics, as well as time spent per bin by the glider.        
+    """
+
+    # Joe add stuff here.
+
+    return currents
 
 """
 Main
@@ -422,9 +453,12 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
         yi = np.arange(0, np.nanmax(np.nanmax(ADCP.bin_depth)) + yi, yi)
         
     DAC = get_DAC(ADCP, gps_predive, gps_postdive)
-    
-    currents = _grid_shear(ADCP, options, xi, yi)
-    currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
-    currents = _reference_velocity(currents,DAC)
+
+    if options['current_profile_method'] == 'lsq_inversion':
+        currents = _lsq_inversion(ADCP, DAC, options, xi, yi)
+    elif options['current_profile_method'] == 'shear_integration':
+        currents = _grid_shear(ADCP, options, xi, yi)
+        currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
+        currents = _reference_velocity(currents,DAC)
     
     return currents, DAC
