@@ -256,7 +256,7 @@ def _grid_shear(ADCP, options, xi, yi):
     
     return currents
 
-def _grid_velocity(currents, method='integrate'):
+def _grid_velocity(currents):
     """
     Assemble shear measurements to reconstruct velocity profiles.
     Currently only able to integrate in the vertical, but I have aspirations to add the least-squared method too.
@@ -278,34 +278,23 @@ def _grid_velocity(currents, method='integrate'):
         Dataset containing gridded shear, statistical metrics, time spent per bin by the glider, and unreferenced velocity profiles.
         
     """
-    def __integrate():
-        def __integrate_calc(Sh):
-            # Integrate shear vertically
-            _bd = ~np.isfinite(Sh)  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
-            Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
-            y_res = np.gradient(currents.depth.values)
-            y_res = np.broadcast_to(y_res[:,np.newaxis],Sh.shape)
-            V = np.cumsum(Sh * y_res, axis=0)  # Cumulative sum of shear to recover velocity profile
-            V[_bd] = np.nan  # Return NaNs to their rightful place.
-            V = V - np.tile(
-                np.nanmean(V, axis=0), (np.shape(V)[0], 1)
-            )  # Make mean of baroclinic profiles equal to 0
-            return V        
-        currents['velocity_E_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_E_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the E direction.'})
-        currents['velocity_N_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_N_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the N direction.'})
-    def __lsq():
-        # Space for Martin Visbeck's least squared method
-        return False
+    def __integrate_calc(Sh):
+        # Integrate shear vertically
+        _bd = ~np.isfinite(Sh)  # Preserve what are originally NaN values to recover later as need conversion to 0 for cumsum-
+        Sh = np.nan_to_num(Sh)  # Replace NaNs with 0 for cumsum
+        y_res = np.gradient(currents.depth.values)
+        y_res = np.broadcast_to(y_res[:,np.newaxis],Sh.shape)
+        V = np.cumsum(Sh * y_res, axis=0)  # Cumulative sum of shear to recover velocity profile
+        V[_bd] = np.nan  # Return NaNs to their rightful place.
+        V = V - np.tile(
+            np.nanmean(V, axis=0), (np.shape(V)[0], 1)
+        )  # Make mean of baroclinic profiles equal to 0
+        return V        
     
+    currents['velocity_E_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_E_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the E direction.'})
+    currents['velocity_N_no_reference'] = (('depth', 'profile_index'), __integrate_calc(currents.shear_N_median.values), {"units": 'm.s-1', 'description': f'Unreferenced velocity profile in the N direction.'})
+
     plog(f'Calculating unreferenced velocity profiles from shear.')
-    
-    if method == 'integrate':
-        fn = __integrate
-    elif method == 'lsq':
-        plog('WARNING: least squared method not yet coded up. Oops. Any volunteers?')
-        fn = __lsq
-        
-    fn()
     
     return currents
 
@@ -458,7 +447,7 @@ def process(ADCP, gps_predive, gps_postdive, options=None):
         currents = _lsq_inversion(ADCP, DAC, options, xi, yi)
     elif options['current_profile_method'] == 'shear_integration':
         currents = _grid_shear(ADCP, options, xi, yi)
-        currents = _grid_velocity(currents, method=options['shear_to_velocity_method'])
+        currents = _grid_velocity(currents)
         currents = _reference_velocity(currents,DAC)
     
     return currents, DAC
