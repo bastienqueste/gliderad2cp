@@ -277,9 +277,13 @@ def _quality_control_velocities(ADCP, options):
         ADCP.AmplitudeBeam3.values,
         ADCP.AmplitudeBeam4.values
         ]).flatten(),[0.5])
+
+    plog('    Instrument noise floor: '+str(noise_floor[0])+'dB')
+
     
     for beam in ['1', '2', '3', '4']:
         
+        plog('    ----')
         # Calculate correlation mask
         C = ADCP['CorrelationBeam' + beam].values.copy()
         n = len(C.flatten()) # For percentage calculation above. 
@@ -290,10 +294,17 @@ def _quality_control_velocities(ADCP, options):
 
         # Calculate amplitude mask
         A = ADCP['AmplitudeBeam' + beam].values.copy()
-        ind = (A > options['QC_amplitude_threshold']) | (A < noise_floor + options['QC_SNR_threshold'])
+        ind = A > options['QC_amplitude_threshold']
         A[ind] = np.nan
         A[np.isfinite(A)] = 1
         plog('    Beam ' + beam + ' amplitude: ' + prct(ind) + '% removed')
+
+        # Calculate amplitude mask
+        S = ADCP['AmplitudeBeam' + beam].values.copy()
+        ind = S < noise_floor + options['QC_SNR_threshold']
+        S[ind] = np.nan
+        S[np.isfinite(S)] = 1
+        plog('    Beam ' + beam + ' SNR: ' + prct(ind) + '% removed')
 
         # Calculate velocity mask
         V = ADCP['VelocityBeam' + beam].values.copy()
@@ -303,7 +314,7 @@ def _quality_control_velocities(ADCP, options):
         plog('    Beam ' + beam + ' velocity: ' + prct(ind) + '% removed')
         
         # Remove bad data
-        ADCP['VelocityBeam' + beam] = ADCP['VelocityBeam' + beam] * C * A * V
+        ADCP['VelocityBeam' + beam] = ADCP['VelocityBeam' + beam] * C * A * V * S
 
     return ADCP
 
@@ -442,7 +453,7 @@ def _regrid_beam_velocities_to_isobars(ADCP, options):
         and the V1, V2, V3, V4 velocities which are velocities from beams 1-4 projected onto isobars.
     
     """
-    if options['velocity_regridding_distance_from_glider'] == 'auto':
+    if isinstance(options['velocity_regridding_distance_from_glider'], str) and options['velocity_regridding_distance_from_glider'] == 'auto':
         ## This is to avoid shear smearing because of tilted ADCP
         if options['ADCP_mounting_direction'] == 'top':
             direction = 1
