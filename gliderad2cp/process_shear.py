@@ -176,7 +176,9 @@ def load_data(adcp_file_path, glider_file_path, options):
     plog('Merging glider data into ADCP dataset.')
     adcp_time_float = ADCP.time.values.astype('float')
     glider_time_float = glider_data['date_float'].values
-    ADCP = ADCP.drop_vars(['MatlabTimeStamp']) # In protest of closed source software.
+    
+    if 'MatlabTimeStamp' in ADCP:
+        ADCP = ADCP.drop_vars(['MatlabTimeStamp']) # In protest of closed source software.
     
     # Coordinates
     ADCP = ADCP.assign_coords(Latitude  = ('time', interp(glider_time_float, glider_data['latitude'], adcp_time_float)))
