@@ -4,6 +4,7 @@ matplotlib
 netcdf4
 numpy
 pandas
+ppigrf
 pooch
 pyarrow
 scipy

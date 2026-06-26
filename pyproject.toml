@@ -15,14 +15,14 @@ maintainers = [
     {name = "Callum Rollo", email = "c.rollo@outlook.com"},
     {name = "Bastien Queste", email = "bastien.queste@gu.se"},
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 dynamic = [
   "dependencies",
