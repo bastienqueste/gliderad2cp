@@ -133,9 +133,7 @@ def correct_heading(ADCP, options):
     
     
     idx = np.full(len(MagX),True)
-    idx = (norm(MagX,MagY,MagZ) < 9999) & ...
-        (np.abs(norm(AccX,AccY,AccZ) - 1) < 0.001) & ...
-        (np.abs(norm(MagX,MagY,MagZ) - np.nanmedian(norm(MagX,MagY,MagZ))) < 3*np.nanstd(norm(MagX,MagY,MagZ)))
+    idx = (norm(MagX,MagY,MagZ) < 9999) & (np.abs(norm(AccX,AccY,AccZ) - 1) < 0.001) & (np.abs(norm(MagX,MagY,MagZ) - np.nanmedian(norm(MagX,MagY,MagZ))) < 3*np.nanstd(norm(MagX,MagY,MagZ)))
     
     iterations = 1
     split = False
