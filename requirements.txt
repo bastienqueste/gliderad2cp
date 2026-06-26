@@ -8,3 +8,4 @@ pooch
 pyarrow
 scipy
 xarray
+cmocean
