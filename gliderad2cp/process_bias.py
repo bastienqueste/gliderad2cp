@@ -182,8 +182,8 @@ def visualise(currents, options, plot_all=True):
                     options,
                     plot=True
                 )
-            plt.xlabel(f'Displacement {l1} per profile')
-            plt.ylabel(f'Mean shear {l2} per profile')
+            plt.xlabel(f'Displacement {l1} per profile ($m$)')
+            plt.ylabel(f'Mean shear {l2} per profile ($s^- ^1$)')
     
     if plot_all:
         # Plots of referenced velocity variance with depth
@@ -210,6 +210,8 @@ def visualise(currents, options, plot_all=True):
         plt.clim(cl)
         XL = plt.xlim()
         plt.ylim(YL)
+        plt.xlabel('Output profile number')
+        plt.ylabel('Depth')
 
         if corr_present:
             plt.subplot(8,2,11)
@@ -219,6 +221,8 @@ def visualise(currents, options, plot_all=True):
             plt.clim(cl)
             plt.xlim(XL)
             plt.ylim(YL)
+            plt.xlabel('Output profile number')
+            plt.ylabel('Depth')
 
         plt.subplot(8,2,13)
         plt.set_cmap('bwr')
@@ -227,6 +231,8 @@ def visualise(currents, options, plot_all=True):
         plt.clim(cl)
         plt.xlim(XL)
         plt.ylim(YL)
+        plt.xlabel('Output profile number')
+        plt.ylabel('Depth')
 
         if corr_present:
             plt.subplot(8,2,15)
@@ -236,7 +242,9 @@ def visualise(currents, options, plot_all=True):
             plt.xlim(XL)
             plt.ylim(YL)
             plt.clim(cl)
-    
+            plt.xlabel('Output profile number')
+            plt.ylabel('Depth')
+        
     plt.tight_layout()
     
     return None

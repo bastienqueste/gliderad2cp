@@ -92,7 +92,7 @@ def load_data(adcp_file_path, glider_file_path, options):
         Inputs
         ----------
         glider_file_path : str
-            Path to the glider file containing time, latitude, longitude, soundspeed, and profile_num. Can be csv, pandas or xarray.
+            Path to the glider file containing time (datetime64), latitude (dd), longitude (dd), salinity (PSU), temperature (deg C), and profile_num. Can be csv, pandas or xarray.
 
 
         Outputs
@@ -677,7 +677,7 @@ def process(adcp_file_path, glider_file_path, options=None):
     adcp_file_path : str
         Path to the AD2CP netcdf files created by the Nortek MIDAS software. Can handle wildcards through glob.
     glider_file_path : str
-        Path to the glider file containing time, latitude, longitude, soundspeed, and profile_num.
+        Path to the glider file containing time (datetime64), latitude (dd), longitude (dd), salinity (PSU), temperature (deg C), and profile_num. 
         Can be csv, pandas or xarray. Can also pass pandas or xarray dataframes directly.
     options : dict
         Set of options for gliderAD2CP, created by the gliderad2cp.tools.get_options() function.
