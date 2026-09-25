@@ -135,8 +135,8 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
         dxy_dvl[idx,0] = travel_e(post_t[idy]) - travel_e(pre_t[idx])
         dxy_dvl[idx,1] = travel_n(post_t[idy]) - travel_n(pre_t[idx])
 
-        dxy_gps[idx,0] = (gps_postdive[idy,1] - gps_predive[idx,1]) * lon2m(gps_predive[idx,1],gps_predive[idx,2])[0]
-        dxy_gps[idx,1] = (gps_postdive[idy,2] - gps_predive[idx,2]) * lat2m(gps_predive[idx,1],gps_predive[idx,2])[0]
+        dxy_gps[idx,0] = (gps_postdive[idy,1] - gps_predive[idx,1]) * lon2m(gps_predive[idx,1],gps_predive[idx,2])
+        dxy_gps[idx,1] = (gps_postdive[idy,2] - gps_predive[idx,2]) * lat2m(gps_predive[idx,1],gps_predive[idx,2])
     
     ## Calculate dive-averaged currents
     dac = (dxy_gps - dxy_dvl) / np.vstack([dive_duration,dive_duration]).T
