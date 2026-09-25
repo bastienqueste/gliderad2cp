@@ -54,6 +54,31 @@ warnings.filterwarnings(action='ignore', message='invalid value encountered in d
 warnings.filterwarnings(action='ignore', message='invalid value encountered in true_divide')
 warnings.filterwarnings(action='ignore', message='Degrees of freedom <= 0 for slice.')
 
+def to_epoch_millseconds_pandas(s: pd.Series, assume_tz: str = "UTC") -> pd.Series:
+    s = pd.to_datetime(s)
+    if s.dt.tz is None:
+        s = s.dt.tz_localize(assume_tz)
+    epoch = pd.Timestamp("1970-01-01", tz="UTC")
+    return (s - epoch) / pd.Timedelta(milliseconds=1)  
+
+
+def to_epoch_milliseconds_xarray(da: xr.DataArray) -> xr.DataArray:
+    if not np.issubdtype(da.dtype, np.datetime64):
+        raise TypeError(f"Expected datetime64 dtype, got {da.dtype}")
+
+    # Treat values as local wall-clock time in assume_tz and shift to UTC
+    def _to_utc(a):
+        idx = pd.DatetimeIndex(a.ravel()).tz_localize(
+            'UTC', ambiguous="NaT", nonexistent="NaT"
+        )
+        return idx.tz_convert("UTC").tz_localize(None).values.reshape(a.shape)
+
+    da = xr.apply_ufunc(_to_utc, da,
+                        output_dtypes=["datetime64[ns]"])
+
+    epoch = np.datetime64("1970-01-01T00:00:00", "ns")
+    return (da - epoch) / np.timedelta64(1, "ms")
+
 
 """
 Data loading functions
@@ -139,21 +164,9 @@ def load_data(adcp_file_path, glider_file_path, options):
         ]
         valid_cols = list(set(list(data)).intersection(sel_cols))
         data = data[valid_cols]
-        time_ms = data.time.values
-        if time_ms.dtype != '<M8[ns]':
-            divisor = 1e3
-            if time_ms.dtype == '<M8[us]':
-                divisor = 1e6
-            time_float = time_ms.astype('float') / divisor
-            base = datetime.datetime(1970, 1, 1)
-            time_ms = []
-            for seconds in time_float:
-                time_ms.append(base + datetime.timedelta(seconds=seconds + 0.0000001))
-            time_nanoseconds = pd.to_datetime(time_ms)
-            data['time'] = time_nanoseconds
-            
-            
-        data['date_float'] = data['time'].values.astype('float')
+
+        data['time'] = data['time'].dt.as_unit("ns")
+        data['date_float'] = to_epoch_millseconds_pandas(data['time'])
         p = data['pressure']
         SA = gsw.conversions.SA_from_SP(data.salinity, p, data.longitude, data.latitude)
         CT = gsw.CT_from_t(SA, data['temperature'], p)
@@ -173,9 +186,11 @@ def load_data(adcp_file_path, glider_file_path, options):
     ADCP.attrs = ADCP_settings.attrs
     
     plog('Merging glider data into ADCP dataset.')
-    adcp_time_float = ADCP.time.values.astype('float')
+    ADCP['time'] = ADCP['time'].astype("datetime64[ns]")
+    adcp_time_float = to_epoch_milliseconds_xarray(ADCP.time)
     glider_time_float = glider_data['date_float'].values
-    ADCP = ADCP.drop_vars(['MatlabTimeStamp']) # In protest of closed source software.
+    if 'MatlabTimeStamp' in list(ADCP):
+        ADCP = ADCP.drop_vars(['MatlabTimeStamp']) # In protest of closed source software.
     
     # Coordinates
     ADCP = ADCP.assign_coords(Latitude  = ('time', interp(glider_time_float, glider_data['latitude'], adcp_time_float)))
