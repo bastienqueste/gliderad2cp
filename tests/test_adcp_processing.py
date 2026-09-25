@@ -37,10 +37,11 @@ def test_process_currents():
         _pre[~_gd] = np.nan
 
         last  = int(np.nanmax(_idx * _post)) - 10
-        gps_postdive.append(np.array([data.time[last].to_datetime64(), data.longitude[last], data.latitude[last]]))
+        gps_postdive.append(np.array([data.time.values[last], data.longitude.values[last], data.latitude.values[last]]))
 
         first = int(np.nanmin(_idx * _pre)) + 10
-        gps_predive.append(np.array([data.time[first].to_datetime64(), data.longitude[first], data.latitude[first]]))
+        gps_predive.append(np.array([data.time.values[first], data.longitude.values[first], data.latitude.values[first]]))
+
 
     gps_predive = np.vstack(gps_predive)
     gps_postdive = np.vstack(gps_postdive)
