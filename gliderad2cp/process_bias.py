@@ -1,16 +1,32 @@
 """
 Correct velocity profiles obtained by ADCP gliders for shear-bias (as described in Todd et al., 2017; Sec.3.b.2 https://doi.org/10.1175/JTECH-D-16-0156.1)
-Applies a different approach to Todd et al. in that we only utilise variance at depth as validation.
-Instead, we aim to reduce the slope of the linear regression :
+Applies a different approach to Todd et al. in that we only utilise variance at depth as validation, rather than our minimisation function.
+The Todd et al. method cannot converge with a glider heading only in one direction (eg. long transects). Instead, we aim to reduce the slope of the linear regression :
 
+For each direction:
 profile_mean(shear - shear_bias_correction) = profile_mean_naturally_occuring_shear + slope * displacement_through_water.
+
+The assumption is that mean shear of the water column (or over the selected depth band) should not correlate with the glider's direction of travel.
+Since shear bias artifically "adds shear" in the direction of travel, we see that a glider heading east through water tends to have systematically higher
+mean shear than a glider heading west. This means that when we plot mean shear on the y-axis and how far the glider has travelled through water in a specific direction,
+we see a slope. We seek to minimise this slope by applying a shear bias correction.
 
 We determine two separate shear_bias_correction coefficients, one in the along-glider direction and one in the across glider direction.
 This is akin to subtracting a portion of the glider's travel through water.
 
-A second (potentially better) correction is also coded up which subtracts a shear_bias_correction which scales with glider speed. 
+A successful correction would theoretically flatten the red lines that appear in the visualisation plots. However, it's never that simple:
+- the ocean is not static, shear varies spatially.
+- the glider flight is often adjusted to compensate for currents, creating minor correlation between heading and shear.
+- ADCP data is noisy
+- this correction applies a constant correction with depth, but this issue is stronger in low scattering waters so is consequently often depth-dependent in the open ocean.
+
+An alternative correction is also coded up which subtracts a shear_bias_correction which scales with glider speed. 
 Preliminary work indicates that shear bias is instrument-velocity dependent, but until this is proven/published, this correction remains the
-non-default correction. NB: the author of this code uses this one all the time.
+non-default correction. Bastien Queste's current thinking (as of early 2026) is that in low SNR conditions, velocities are perceived as smaller (ie. closer to zero).
+In low scattering waters, distant bins tend to be closer to 0 than nearby bins. This bias seems proportional to velocity 
+(ie. a percentage decrease of velocity, as a function of both range and SNR.). Both Todd et al.'s and this correction do not account for 
+this. Work is ongoing but right now it's really difficult to pin point this range and SNR dependence as it seems to be instrument
+dependent. Thoughts welcome!
 
 
 gliderad2cp.process_bias
@@ -182,8 +198,8 @@ def visualise(currents, options, plot_all=True):
                     options,
                     plot=True
                 )
-            plt.xlabel(f'Displacement {l1} per profile')
-            plt.ylabel(f'Mean shear {l2} per profile')
+            plt.xlabel(f'Displacement {l1} per profile ($m$)')
+            plt.ylabel(f'Mean shear {l2} per profile ($s^-1$)')
     
     if plot_all:
         # Plots of referenced velocity variance with depth
@@ -210,6 +226,8 @@ def visualise(currents, options, plot_all=True):
         plt.clim(cl)
         XL = plt.xlim()
         plt.ylim(YL)
+        plt.xlabel('Output profile number')
+        plt.ylabel('Depth')
 
         if corr_present:
             plt.subplot(8,2,11)
@@ -219,6 +237,8 @@ def visualise(currents, options, plot_all=True):
             plt.clim(cl)
             plt.xlim(XL)
             plt.ylim(YL)
+            plt.xlabel('Output profile number')
+            plt.ylabel('Depth')
 
         plt.subplot(8,2,13)
         plt.set_cmap('bwr')
@@ -227,6 +247,8 @@ def visualise(currents, options, plot_all=True):
         plt.clim(cl)
         plt.xlim(XL)
         plt.ylim(YL)
+        plt.xlabel('Output profile number')
+        plt.ylabel('Depth')
 
         if corr_present:
             plt.subplot(8,2,15)
@@ -236,7 +258,9 @@ def visualise(currents, options, plot_all=True):
             plt.xlim(XL)
             plt.ylim(YL)
             plt.clim(cl)
-    
+            plt.xlabel('Output profile number')
+            plt.ylabel('Depth')
+        
     plt.tight_layout()
     
     return None

@@ -24,7 +24,7 @@ def get_options(verbose=True, **kwargs):
         'QC_velocity_threshold' : [0.8, 'maximum acceptable along-beam velocity in m.s-1.'],
         'QC_SNR_threshold' : [3, 'minimum acceptable dB above the noise floor.'],
         'velocity_regridding_distance_from_glider' : ['auto', 'array of depth-offsets from the glider, in m, at which to interpolate beam velocities onto isobars to avoid shear-smearing. Negative for bottom-mounted ADCPs.'],
-        'xaxis' : [1, 'x-axis resolution in number of profiles of the final gridded products.'],
+        'xaxis' : [1, 'x-axis resolution in number of input profiles of the final gridded products. 1 for single casts; 2 for whole dives; more for longer horizontal averaging.'],
         'yaxis' : [None, 'If None: ADCP cell size. If int: y-axis resolution in metres of the final gridded products.'],
         'weight_shear_bias_regression' : [False, True, 'Give greater weight to dives with greater travel distance which can increase signal to noise.'],
         'velocity_dependent_shear_bias_correction' : [False, True, 'Determine velocity dependent shear-bias correction coefficients rather than constant coefficients.'],
