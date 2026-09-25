@@ -116,8 +116,8 @@ def get_DAC(ADCP, gps_predive, gps_postdive):
     pre_t = gps_predive[:, 0].astype('datetime64[s]').astype(np.float64) # s
     post_t = gps_postdive[:, 0].astype('datetime64[s]').astype(np.float64) # s
 
-    lon2m = lambda x, y : gsw.distance([x-0.0005, x + 0.0005], [y, y])*1000
-    lat2m = lambda x, y : gsw.distance([x, x], [y-0.0005, y+0.0005])*1000
+    lon2m = lambda x, y: float(gsw.distance([x-0.0005, x+0.0005], [y, y])[0]) * 1000
+    lat2m = lambda x, y: float(gsw.distance([x, x], [y-0.0005, y+0.0005])[0]) * 1000
     
     ## Calculate displacements
     for idx in range(len(gps_predive)):
